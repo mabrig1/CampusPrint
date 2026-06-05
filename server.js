@@ -7,8 +7,13 @@ import orderRoutes from './routes/orders.js';
 import paymentRoutes from './routes/payments.js';
 import adminRoutes from './routes/admin.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { fileURLToPath } from 'url';
+import path from 'path';
 
 dotenv.config();
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
 
 const app = express();
 
@@ -59,6 +64,13 @@ app.get('/', (req, res) => {
       admin: '/api/admin',
     },
   });
+});
+
+// Serve frontend
+app.use(express.static(path.join(__dirname, 'public')));
+app.get('*', (req, res, next) => {
+  if (req.path.startsWith('/api')) return next();
+  res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
 app.use(errorHandler);
