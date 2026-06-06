@@ -18,10 +18,12 @@ const __dirname = path.dirname(__filename);
 const app = express();
 
 // Middleware
+const allowedOrigins = process.env.NODE_ENV === 'production'
+  ? (process.env.ALLOWED_ORIGINS?.split(',') ?? ['https://campusprint.store', 'https://www.campusprint.store'])
+  : ['http://localhost:3000', 'http://127.0.0.1:5500', 'http://localhost:5000'];
+
 app.use(cors({
-  origin: process.env.NODE_ENV === 'production'
-    ? process.env.ALLOWED_ORIGINS?.split(',') ?? []
-    : ['http://localhost:3000', 'http://127.0.0.1:5500'],
+  origin: allowedOrigins,
   credentials: true,
 }));
 app.use(express.json({ limit: '50mb' }));
