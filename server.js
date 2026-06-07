@@ -54,22 +54,9 @@ app.get('/api/health', (req, res) => {
   });
 });
 
-app.get('/', (req, res) => {
-  res.json({
-    message: 'CampusPrint API v1.0',
-    endpoints: {
-      health: '/api/health',
-      orders: '/api/orders',
-      payments: '/api/payments',
-      admin: '/api/admin',
-    },
-  });
-});
-
-// Serve frontend
+// Serve frontend (must come after all /api routes)
 app.use(express.static(path.join(__dirname, 'public')));
-app.get('*', (req, res, next) => {
-  if (req.path.startsWith('/api')) return next();
+app.get('*', (req, res) => {
   res.sendFile(path.join(__dirname, 'public', 'index.html'));
 });
 
