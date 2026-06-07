@@ -1,7 +1,17 @@
+import jwt from 'jsonwebtoken';
+
 export const adminAuth = (req, res, next) => {
-  const secret = req.headers['x-admin-secret'] || req.query.secret;
-  if (!secret || secret !== process.env.ADMIN_SECRET) {
-    return res.status(401).json({ success: false, message: 'Unauthorized' });
+  const header = req.headers['authorization'] || '';
+  const token = header.startsWith('Bearer ') ? header.slice(7) : null;
+
+  if (!token) {
+    return res.status(401).json({ success: false, message: 'No token provided' });
   }
-  next();
+
+  try {
+    req.admin = jwt.verify(token, process.env.JWT_SECRET);
+    next();
+  } catch {
+    return res.status(401).json({ success: false, message: 'Invalid or expired token' });
+  }
 };

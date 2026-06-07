@@ -6,6 +6,7 @@ import mongoose from 'mongoose';
 import orderRoutes from './routes/orders.js';
 import paymentRoutes from './routes/payments.js';
 import adminRoutes from './routes/admin.js';
+import authRoutes from './routes/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -41,6 +42,7 @@ const connectDB = async () => {
 connectDB();
 
 // Routes
+app.use('/api/auth', authRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
