@@ -5,6 +5,18 @@ import { notifyAdministrators } from '../services/notificationService.js';
 
 const router = express.Router();
 
+// POST /api/orders/price-estimate — MUST be before /:orderId to avoid route conflict
+router.post('/price-estimate', (req, res) => {
+  try {
+    const { files } = req.body;
+    if (!files?.length) return res.status(400).json({ success: false, message: 'Files required' });
+    const pricing = calculateOrderTotal(files);
+    res.json({ success: true, data: pricing });
+  } catch (err) {
+    res.status(500).json({ success: false, message: err.message });
+  }
+});
+
 // POST /api/orders — create a new order
 router.post('/', async (req, res, next) => {
   try {
@@ -39,7 +51,7 @@ router.post('/', async (req, res, next) => {
   }
 });
 
-// GET /api/orders/:orderId — fetch a single order by orderId
+// GET /api/orders/:orderId — fetch a single order
 router.get('/:orderId', async (req, res, next) => {
   try {
     const order = await Order.findOne({ orderId: req.params.orderId });
@@ -50,7 +62,7 @@ router.get('/:orderId', async (req, res, next) => {
   }
 });
 
-// GET /api/orders — list orders (optionally filter by email)
+// GET /api/orders — list orders
 router.get('/', async (req, res, next) => {
   try {
     const { email, status, page = 1, limit = 20 } = req.query;
@@ -67,18 +79,6 @@ router.get('/', async (req, res, next) => {
     res.json({ success: true, data: orders, total, page: Number(page), limit: Number(limit) });
   } catch (err) {
     next(err);
-  }
-});
-
-// GET /api/orders/price-estimate — calculate price without saving
-router.post('/price-estimate', (req, res) => {
-  try {
-    const { files } = req.body;
-    if (!files?.length) return res.status(400).json({ success: false, message: 'Files required' });
-    const pricing = calculateOrderTotal(files);
-    res.json({ success: true, data: pricing });
-  } catch (err) {
-    res.status(500).json({ success: false, message: err.message });
   }
 });
 
