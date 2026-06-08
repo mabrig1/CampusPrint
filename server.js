@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
+import Admin from './models/Admin.js';
 
 dotenv.config();
 
@@ -33,9 +34,20 @@ const connectDB = async () => {
   try {
     await mongoose.connect(process.env.MONGO_URI);
     console.log('✅ MongoDB Connected');
+    await seedAdmin();
   } catch (err) {
     console.error('❌ MongoDB Error:', err.message);
     process.exit(1);
+  }
+};
+
+// Auto-create default admin on first start
+const seedAdmin = async () => {
+  const exists = await Admin.findOne({ username: 'admin' });
+  if (!exists) {
+    await Admin.create({ username: 'admin', password: 'CampusPrint@2025', role: 'superadmin' });
+    console.log('👤 Default admin created  →  username: admin  |  password: CampusPrint@2025');
+    console.log('⚠️  Change this password after first login!');
   }
 };
 
