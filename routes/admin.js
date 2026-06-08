@@ -1,5 +1,6 @@
 import express from 'express';
 import Order from '../models/Order.js';
+import Referral from '../models/Referral.js';
 import { adminAuth } from '../middleware/adminAuth.js';
 import { notifyOrderReady } from '../services/notificationService.js';
 
@@ -104,6 +105,41 @@ router.delete('/orders/:orderId', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// ── REFERRAL ROUTES ──────────────────────────────────────
+
+// GET /api/admin/referrals
+router.get('/referrals', async (req, res, next) => {
+  try {
+    const referrals = await Referral.find().sort({ totalEarnings: -1 });
+    res.json({ success: true, data: referrals });
+  } catch (err) { next(err); }
+});
+
+// POST /api/admin/referrals — create referral agent
+router.post('/referrals', async (req, res, next) => {
+  try {
+    const { name, email, phone, code } = req.body;
+    if (!name || !email) return res.status(400).json({ success: false, message: 'Name and email required' });
+    const generatedCode = code?.toUpperCase().trim() ||
+      name.split(' ').map(w => w[0]).join('').toUpperCase() +
+      Math.random().toString(36).slice(2, 5).toUpperCase();
+    const referral = await Referral.create({ name, email, phone, code: generatedCode });
+    res.status(201).json({ success: true, data: referral });
+  } catch (err) { next(err); }
+});
+
+// PATCH /api/admin/referrals/:code/payout — mark commission paid
+router.patch('/referrals/:code/payout', async (req, res, next) => {
+  try {
+    const referral = await Referral.findOne({ code: req.params.code.toUpperCase() });
+    if (!referral) return res.status(404).json({ success: false, message: 'Referral not found' });
+    const amount = req.body.amount ?? (referral.totalEarnings - referral.paidOut);
+    referral.paidOut += amount;
+    await referral.save();
+    res.json({ success: true, data: referral });
+  } catch (err) { next(err); }
 });
 
 export default router;

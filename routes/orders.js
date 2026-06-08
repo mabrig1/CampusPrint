@@ -1,11 +1,13 @@
 import express from 'express';
 import Order from '../models/Order.js';
+import Referral from '../models/Referral.js';
 import { calculateOrderTotal } from '../config/pricing.js';
 import { notifyAdministrators } from '../services/notificationService.js';
 
 const router = express.Router();
+const COMMISSION_PER_PAGE = 5; // ₦5 per printed page
 
-// POST /api/orders/price-estimate — MUST be before /:orderId to avoid route conflict
+// POST /api/orders/price-estimate — MUST be before /:orderId
 router.post('/price-estimate', (req, res) => {
   try {
     const { files } = req.body;
@@ -20,13 +22,19 @@ router.post('/price-estimate', (req, res) => {
 // POST /api/orders — create a new order
 router.post('/', async (req, res, next) => {
   try {
-    const { student, files, pickupLocation, specialInstructions } = req.body;
+    const { student, files, pickupLocation, specialInstructions, referralCode, channel } = req.body;
 
     if (!student?.name || !student?.email) {
       return res.status(400).json({ success: false, message: 'Student name and email are required' });
     }
     if (!files?.length) {
       return res.status(400).json({ success: false, message: 'At least one file is required' });
+    }
+
+    // Validate referral code if provided
+    let referral = null;
+    if (referralCode) {
+      referral = await Referral.findOne({ code: referralCode.toUpperCase().trim(), active: true });
     }
 
     const pricing = calculateOrderTotal(files);
@@ -37,12 +45,25 @@ router.post('/', async (req, res, next) => {
       pricing,
       pickupLocation,
       specialInstructions,
+      referralCode: referral ? referral.code : undefined,
+      channel: channel || 'web',
     });
+
+    // Credit commission to referrer
+    if (referral) {
+      const totalPages = files.reduce((sum, f) => sum + (f.pages || 1) * (f.copies || 1), 0);
+      const commission = totalPages * COMMISSION_PER_PAGE;
+      referral.totalPagesReferred += totalPages;
+      referral.totalEarnings      += commission;
+      referral.ordersReferred.push(order._id);
+      await referral.save();
+    }
 
     await notifyAdministrators(
       `New Order ${order.orderId}`,
       `<p>New order from <strong>${student.name}</strong> (${student.email}).</p>
-       <p>Total: ₦${pricing.totalAmount.toLocaleString()}</p>`
+       <p>Total: ₦${pricing.totalAmount.toLocaleString()}</p>
+       ${referral ? `<p>Referral: <strong>${referral.code}</strong> (${referral.name})</p>` : ''}`
     );
 
     res.status(201).json({ success: true, data: order });
