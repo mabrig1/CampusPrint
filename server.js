@@ -11,6 +11,7 @@ import { errorHandler } from './middleware/errorHandler.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import Admin from './models/Admin.js';
+import fs from 'fs';
 
 dotenv.config();
 
@@ -61,6 +62,15 @@ app.get('/api/health', (req, res) => {
     timestamp: new Date().toISOString(),
     env: process.env.NODE_ENV || 'development',
   });
+});
+
+// Inject Paystack public key into index.html at request time
+app.get('/', (req, res) => {
+  const indexPath = path.join(__dirname, 'public', 'index.html');
+  let content = fs.readFileSync(indexPath, 'utf8');
+  const inject = `<script>window.__PAYSTACK_PK__="${process.env.PAYSTACK_PUBLIC_KEY || ''}";</script>`;
+  content = content.replace('</head>', `${inject}</head>`);
+  res.send(content);
 });
 
 // Serve frontend (must come after all /api routes)
