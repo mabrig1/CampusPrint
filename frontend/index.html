@@ -80,10 +80,11 @@
       <i class="fa-solid fa-print"></i> CampusPrint
     </a>
     <div class="flex gap-1">
-      <button onclick="showPage('home')"   id="nav-home"   class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Home</button>
-      <button onclick="showPage('order')"  id="nav-order"  class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">New Order</button>
-      <button onclick="showPage('track')"  id="nav-track"  class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Track Order</button>
-      <button onclick="showPage('admin')"  id="nav-admin"  class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Admin</button>
+      <button onclick="showPage('home')"     id="nav-home"     class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Home</button>
+      <button onclick="showPage('order')"    id="nav-order"    class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">New Order</button>
+      <button onclick="showPage('track')"    id="nav-track"    class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Track</button>
+      <button onclick="showPage('referral')" id="nav-referral" class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-green-600 hover:bg-green-50">Earn ₦</button>
+      <button onclick="showPage('admin')"    id="nav-admin"    class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Admin</button>
     </div>
   </div>
 </nav>
@@ -311,6 +312,131 @@
   </div>
 </div>
 
+<!-- ════════════════════  REFERRAL PAGE  ════════════════════ -->
+<div id="page-referral" class="panel max-w-4xl mx-auto px-4 py-10">
+
+  <!-- Hero -->
+  <div class="bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl p-7 text-white text-center mb-8 shadow-lg">
+    <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
+      <i class="fa-solid fa-hand-holding-dollar text-2xl"></i>
+    </div>
+    <h2 class="text-2xl font-bold mb-2">Earn Money Referring Students</h2>
+    <p class="text-green-100 max-w-md mx-auto text-sm">Get <strong class="text-white">₦5 for every page</strong> printed by students you refer. No limit — the more you refer, the more you earn.</p>
+    <div class="grid grid-cols-3 gap-3 mt-6 max-w-sm mx-auto">
+      <div class="bg-white/15 rounded-xl p-3 text-center">
+        <p class="text-xl font-bold">₦5</p>
+        <p class="text-xs text-green-100">per page</p>
+      </div>
+      <div class="bg-white/15 rounded-xl p-3 text-center">
+        <p class="text-xl font-bold">₦150</p>
+        <p class="text-xs text-green-100">per 30-page job</p>
+      </div>
+      <div class="bg-white/15 rounded-xl p-3 text-center">
+        <p class="text-xl font-bold">∞</p>
+        <p class="text-xs text-green-100">no cap</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="grid sm:grid-cols-2 gap-6">
+
+    <!-- SIGNUP FORM -->
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <h3 class="font-bold text-gray-800 text-lg mb-1"><i class="fa-solid fa-user-plus text-green-600 mr-2"></i>Join as Referral Agent</h3>
+      <p class="text-xs text-gray-400 mb-5">Free to join. Get your unique code instantly.</p>
+
+      <div id="signup-success" class="hidden mb-4 bg-green-50 border border-green-200 rounded-xl p-4 text-center">
+        <i class="fa-solid fa-circle-check text-green-600 text-2xl mb-2 block"></i>
+        <p class="font-bold text-green-800 mb-1">You're in! 🎉</p>
+        <p class="text-sm text-green-700 mb-3">Your referral code is:</p>
+        <div class="bg-white border-2 border-green-400 rounded-xl py-3 px-4 text-2xl font-mono font-bold text-green-700 tracking-widest mb-3" id="new-code-display"></div>
+        <button onclick="copyCode()" class="text-xs text-green-600 font-medium border border-green-200 px-3 py-1.5 rounded-lg hover:bg-green-50 transition">
+          <i class="fa-solid fa-copy mr-1"></i>Copy Link
+        </button>
+      </div>
+
+      <div id="signup-form-wrap">
+        <div id="signup-error" class="hidden mb-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-600">
+          <i class="fa-solid fa-circle-xmark mr-1"></i><span id="signup-error-msg"></span>
+        </div>
+        <div class="space-y-3">
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Full Name *</label>
+            <input id="ref-name" type="text" placeholder="e.g. Chidi Okeke" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Email *</label>
+            <input id="ref-email" type="email" placeholder="you@example.com" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" />
+          </div>
+          <div>
+            <label class="block text-xs font-medium text-gray-600 mb-1">Phone *</label>
+            <input id="ref-phone" type="tel" placeholder="08012345678" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" />
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Faculty</label>
+              <input id="ref-faculty" type="text" placeholder="e.g. Science" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" />
+            </div>
+            <div>
+              <label class="block text-xs font-medium text-gray-600 mb-1">Level</label>
+              <select id="ref-level" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300">
+                <option value="">Select</option>
+                <option>100L</option><option>200L</option><option>300L</option>
+                <option>400L</option><option>500L</option><option>Postgrad</option>
+              </select>
+            </div>
+          </div>
+          <button id="signup-btn" onclick="referralSignup()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-bolt"></i> Get My Referral Code
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- AGENT DASHBOARD -->
+    <div class="space-y-5">
+
+      <!-- Check earnings -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h3 class="font-bold text-gray-800 text-lg mb-4"><i class="fa-solid fa-chart-line text-blue-600 mr-2"></i>Check My Earnings</h3>
+        <div class="flex gap-2 mb-4">
+          <input id="check-code" type="text" placeholder="Enter your code e.g. CJK3P" class="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 uppercase" style="text-transform:uppercase" onkeydown="if(event.key==='Enter')checkEarnings()" />
+          <button onclick="checkEarnings()" class="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-4 py-2.5 rounded-lg transition text-sm">Check</button>
+        </div>
+        <div id="earnings-result"></div>
+      </div>
+
+      <!-- How it works -->
+      <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+        <h3 class="font-bold text-gray-800 mb-4"><i class="fa-solid fa-circle-info text-amber-500 mr-2"></i>How It Works</h3>
+        <ol class="space-y-3 text-sm text-gray-600">
+          <li class="flex gap-3">
+            <span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">1</span>
+            <span>Sign up and get your unique referral code</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">2</span>
+            <span>Share your link with students in your hostel, faculty, and class</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">3</span>
+            <span>They enter your code when placing an order</span>
+          </li>
+          <li class="flex gap-3">
+            <span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">4</span>
+            <span>You earn <strong class="text-green-700">₦5 for every page</strong> they print — paid monthly via bank transfer</span>
+          </li>
+        </ol>
+        <div class="mt-4 bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-700">
+          <i class="fa-solid fa-lightbulb mr-1"></i>
+          <strong>Example:</strong> If 20 students each print 30 pages using your code → <strong>₦3,000</strong> earned in one batch!
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
 <!-- ════════════════════  ADMIN PAGE  ════════════════════ -->
 <div id="page-admin" class="panel max-w-5xl mx-auto px-4 py-10">
   <!-- Auth -->
@@ -451,7 +577,7 @@
   </div>
 </div>
 
-<a href="https://wa.me/2347065342818?text=Hi%2C%20I%20want%20to%20place%20a%20print%20order"
+<a href="https://wa.me/2347065342818?text=Hi%2C%20I%20want%20to%20place%20a%20print%20order%20on%20CampusPrint"
    target="_blank"
    class="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition"
    title="Order via WhatsApp">
@@ -1129,7 +1255,123 @@ async function payReferral(code, pending) {
   }
 }
 
+// ═══════════════════════ REFERRAL ════════════════════════
+let newReferralCode = '';
+
+async function referralSignup() {
+  const name  = document.getElementById('ref-name').value.trim();
+  const email = document.getElementById('ref-email').value.trim();
+  const phone = document.getElementById('ref-phone').value.trim();
+  const faculty = document.getElementById('ref-faculty').value.trim();
+  const level   = document.getElementById('ref-level').value;
+
+  document.getElementById('signup-error').classList.add('hidden');
+  if (!name || !email || !phone) {
+    document.getElementById('signup-error-msg').textContent = 'Name, email and phone are required';
+    document.getElementById('signup-error').classList.remove('hidden');
+    return;
+  }
+
+  const btn = document.getElementById('signup-btn');
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span> Registering…';
+
+  try {
+    const res = await apiFetch(`${API}/referrals/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ name, email, phone, faculty, level }),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    newReferralCode = data.data.code;
+    document.getElementById('new-code-display').textContent = newReferralCode;
+    document.getElementById('signup-form-wrap').classList.add('hidden');
+    document.getElementById('signup-success').classList.remove('hidden');
+    toast(`Welcome ${data.data.name}! Your code is ${newReferralCode}`, 'success');
+  } catch (err) {
+    document.getElementById('signup-error-msg').textContent = err.message || 'Registration failed';
+    document.getElementById('signup-error').classList.remove('hidden');
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Get My Referral Code';
+  }
+}
+
+function copyCode() {
+  const base = window.location.origin;
+  const link = `${base}/?ref=${newReferralCode}`;
+  navigator.clipboard.writeText(link).then(() => toast('Referral link copied!', 'success'));
+}
+
+async function checkEarnings() {
+  const code = document.getElementById('check-code').value.trim().toUpperCase();
+  if (!code) { toast('Enter your referral code', 'error'); return; }
+  const el = document.getElementById('earnings-result');
+  el.innerHTML = '<div class="text-center py-4"><div class="spinner mx-auto" style="border-color:#1d4ed8;border-top-color:transparent;width:1.5rem;height:1.5rem;border-width:3px;"></div></div>';
+  try {
+    const res = await apiFetch(`${API}/referrals/${code}`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    const r = data.data;
+    const pending = r.totalEarnings - r.paidOut;
+    el.innerHTML = `
+      <div class="space-y-2">
+        <div class="flex justify-between text-sm py-2 border-b border-gray-50">
+          <span class="text-gray-500">Agent</span>
+          <span class="font-semibold">${r.name}</span>
+        </div>
+        <div class="flex justify-between text-sm py-2 border-b border-gray-50">
+          <span class="text-gray-500">Your Code</span>
+          <span class="font-mono font-bold text-green-700 tracking-wider">${r.code}</span>
+        </div>
+        <div class="flex justify-between text-sm py-2 border-b border-gray-50">
+          <span class="text-gray-500">Pages Referred</span>
+          <span class="font-semibold">${r.totalPagesReferred.toLocaleString()}</span>
+        </div>
+        <div class="flex justify-between text-sm py-2 border-b border-gray-50">
+          <span class="text-gray-500">Total Earned</span>
+          <span class="font-semibold text-green-700">₦${r.totalEarnings.toLocaleString()}</span>
+        </div>
+        <div class="flex justify-between text-sm py-2 border-b border-gray-50">
+          <span class="text-gray-500">Paid Out</span>
+          <span class="font-semibold">₦${r.paidOut.toLocaleString()}</span>
+        </div>
+        <div class="flex justify-between text-sm py-2 bg-green-50 rounded-lg px-2 mt-1">
+          <span class="font-semibold text-green-700">Pending Payout</span>
+          <span class="font-bold text-green-700 text-base">₦${pending.toLocaleString()}</span>
+        </div>
+        <button onclick="shareReferralLink('${r.code}')" class="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 rounded-xl transition">
+          <i class="fa-solid fa-share-nodes mr-1"></i> Share My Referral Link
+        </button>
+      </div>`;
+  } catch (err) {
+    el.innerHTML = `<p class="text-red-500 text-sm text-center py-3"><i class="fa-solid fa-circle-xmark mr-1"></i>${err.message}</p>`;
+  }
+}
+
+function shareReferralLink(code) {
+  const link = `${window.location.origin}/?ref=${code}`;
+  if (navigator.share) {
+    navigator.share({
+      title: 'CampusPrint – Fast Campus Printing',
+      text: `Use my referral code ${code} to order prints on CampusPrint and get fast delivery on campus!`,
+      url: link,
+    });
+  } else {
+    navigator.clipboard.writeText(link).then(() => toast('Referral link copied to clipboard!', 'success'));
+  }
+}
+
 // ═══════════════════════ INIT ════════════════════════
+// Auto-fill referral code from URL ?ref= param
+const urlRef = new URLSearchParams(window.location.search).get('ref');
+if (urlRef) {
+  const refInput = document.getElementById('st-referral');
+  if (refInput) refInput.value = urlRef.toUpperCase();
+  toast(`Referral code "${urlRef.toUpperCase()}" applied!`, 'success');
+}
+
 // Restore admin session from localStorage if token exists
 if (adminToken && adminUser) showAdminDash();
 showPage('home');
