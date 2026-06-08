@@ -485,7 +485,7 @@ function renderFileList() {
   const el = document.getElementById('file-list');
   if (!files.length) { el.innerHTML = ''; return; }
   el.innerHTML = files.map((f, i) => `
-    <div class="file-card">
+    <div class="file-card" data-index="${i}">
       <div class="flex items-start justify-between gap-2 mb-3">
         <div class="flex items-center gap-2 min-w-0">
           <i class="fa-solid fa-file-pdf text-red-400 text-lg flex-shrink-0"></i>
@@ -496,15 +496,15 @@ function renderFileList() {
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         <div>
           <label class="text-gray-500 mb-1 block">Pages</label>
-          <input type="number" min="1" value="${f.pages}" class="w-full border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300" oninput="files[${i}].pages=Math.max(1,+this.value||1);estimatePrice()" />
+          <input type="number" min="1" value="${f.pages}" class="w-full border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300" oninput="updateFile(${i},'pages',this.value)" onchange="updateFile(${i},'pages',this.value)" />
         </div>
         <div>
           <label class="text-gray-500 mb-1 block">Copies</label>
-          <input type="number" min="1" value="${f.copies}" class="w-full border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300" oninput="files[${i}].copies=Math.max(1,+this.value||1);estimatePrice()" />
+          <input type="number" min="1" value="${f.copies}" class="w-full border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300" oninput="updateFile(${i},'copies',this.value)" onchange="updateFile(${i},'copies',this.value)" />
         </div>
         <div>
           <label class="text-gray-500 mb-1 block">Size</label>
-          <select class="w-full border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300" onchange="files[${i}].paperSize=this.value;estimatePrice()">
+          <select class="w-full border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300" onchange="updateFile(${i},'paperSize',this.value)">
             ${['A4','A3','Letter'].map(s=>`<option ${f.paperSize===s?'selected':''}>${s}</option>`).join('')}
           </select>
         </div>
@@ -517,13 +517,13 @@ function renderFileList() {
         </div>
         <div>
           <label class="text-gray-500 mb-1 block">Binding</label>
-          <select class="w-full border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300" onchange="files[${i}].binding=this.value;estimatePrice()">
+          <select class="w-full border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300" onchange="updateFile(${i},'binding',this.value)">
             ${['none','staple','spiral'].map(b=>`<option value="${b}" ${f.binding===b?'selected':''}>${b.charAt(0).toUpperCase()+b.slice(1)}</option>`).join('')}
           </select>
         </div>
         <div class="flex items-end pb-0.5">
           <label class="flex items-center gap-1.5 cursor-pointer select-none">
-            <input type="checkbox" ${f.doubleSided?'checked':''} class="rounded" onchange="files[${i}].doubleSided=this.checked;estimatePrice()" />
+            <input type="checkbox" ${f.doubleSided?'checked':''} class="rounded" onchange="updateFile(${i},'doubleSided',this.checked)" />
             <span class="text-gray-600">Double-sided</span>
           </label>
         </div>
@@ -535,13 +535,38 @@ function renderFileList() {
 
 function removeFile(i) { files.splice(i, 1); renderFileList(); }
 
+function updateFile(i, field, value) {
+  if (field === 'pages' || field === 'copies') {
+    files[i][field] = Math.max(1, parseInt(value) || 1);
+  } else if (field === 'doubleSided') {
+    files[i][field] = Boolean(value);
+  } else {
+    files[i][field] = value;
+  }
+  estimatePrice();
+}
+
+async function apiFetch(url, options = {}, timeoutMs = 15000) {
+  const controller = new AbortController();
+  const tid = setTimeout(() => controller.abort(), timeoutMs);
+  try {
+    const res = await fetch(url, { ...options, signal: controller.signal });
+    clearTimeout(tid);
+    return res;
+  } catch (err) {
+    clearTimeout(tid);
+    if (err.name === 'AbortError') throw new Error('Request timed out. Check your connection.');
+    throw err;
+  }
+}
+
 let estimateDebounce;
 async function estimatePrice() {
   clearTimeout(estimateDebounce);
   estimateDebounce = setTimeout(async () => {
     if (!files.length) return;
     try {
-      const r = await fetch(`${API}/orders/price-estimate`, {
+      const r = await apiFetch(`${API}/orders/price-estimate`, {
         method: 'POST', headers: {'Content-Type':'application/json'},
         body: JSON.stringify({ files })
       });
@@ -556,7 +581,16 @@ async function estimatePrice() {
 
 // ═══════════════════════ REVIEW ════════════════════════
 async function renderReview() {
-  const r = await fetch(`${API}/orders/price-estimate`, {
+  // Sync number inputs before calculating (ensures mobile keyboard changes are captured)
+  document.querySelectorAll('#file-list .file-card').forEach(card => {
+    const i = parseInt(card.dataset.index);
+    if (isNaN(i)) return;
+    const inputs = card.querySelectorAll('input[type=number]');
+    if (inputs[0]) files[i].pages   = Math.max(1, parseInt(inputs[0].value) || 1);
+    if (inputs[1]) files[i].copies  = Math.max(1, parseInt(inputs[1].value) || 1);
+  });
+
+  const r = await apiFetch(`${API}/orders/price-estimate`, {
     method: 'POST', headers: {'Content-Type':'application/json'},
     body: JSON.stringify({ files })
   }).then(r=>r.json()).catch(()=>null);
@@ -613,7 +647,7 @@ async function submitOrder() {
   };
 
   try {
-    const res = await fetch(`${API}/orders`, {
+    const res = await apiFetch(`${API}/orders`, {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify(payload)
     });
@@ -637,7 +671,7 @@ async function initiatePaystack(order) {
   document.getElementById('payment-error').classList.add('hidden');
 
   try {
-    const res = await fetch(`${API}/payments/initialize`, {
+    const res = await apiFetch(`${API}/payments/initialize`, {
       method: 'POST', headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ orderId: order.orderId, email: order.student.email })
     });
@@ -668,7 +702,7 @@ async function initiatePaystack(order) {
 
 async function verifyPayment(reference) {
   try {
-    const res = await fetch(`${API}/payments/verify/${reference}`);
+    const res = await apiFetch(`${API}/payments/verify/${reference}`);
     const data = await res.json();
     if (data.success && data.data.status === 'success') {
       document.getElementById('success-orderId').textContent = currentOrder.orderId;
