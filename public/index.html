@@ -564,6 +564,7 @@
   <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
     <h3 class="font-bold text-gray-800 text-lg mb-4">Update Order Status</h3>
     <p id="modal-order-id" class="text-xs text-gray-400 font-mono mb-3"></p>
+    <div id="modal-files" class="space-y-1 mb-3"></div>
     <select id="modal-status" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3">
       <option>pending</option><option>confirmed</option><option>printing</option>
       <option>ready</option><option>collected</option><option>cancelled</option>
@@ -595,6 +596,7 @@ let adminToken = localStorage.getItem('cp_admin_token') || '';
 let adminUser  = JSON.parse(localStorage.getItem('cp_admin_user') || 'null');
 let modalOrderId = '';
 let debounceTimer;
+let adminOrdersCache = [];
 
 // ═══════════════════════ NAVIGATION ═══════════════════
 function showPage(name) {
@@ -631,6 +633,8 @@ function goStep(n) {
   }
   if (n === 3) {
     if (!files.length) { toast('Please add at least one file', 'error'); return; }
+    if (files.some(f => f.uploading)) { toast('Please wait for files to finish uploading', 'error'); return; }
+    if (files.some(f => f.error || !f.url)) { toast('Remove files that failed to upload before continuing', 'error'); return; }
     renderReview();
   }
   document.getElementById('step-' + currentStep).classList.remove('active');
@@ -658,9 +662,28 @@ dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.
 function handleFileInput(fileList) {
   for (const f of fileList) {
     if (f.size > 20 * 1024 * 1024) { toast(`${f.name} exceeds 20 MB limit`, 'error'); continue; }
-    files.push({ name: f.name, pages: 1, copies: 1, serviceType: 'print_bw', paperSize: 'A4', doubleSided: false, binding: 'none' });
+    const entry = { name: f.name, pages: 1, copies: 1, serviceType: 'print_bw', paperSize: 'A4', doubleSided: false, binding: 'none', url: null, uploading: true, error: null };
+    files.push(entry);
+    uploadFile(f, entry);
   }
   renderFileList();
+}
+
+async function uploadFile(rawFile, entry) {
+  const formData = new FormData();
+  formData.append('file', rawFile);
+  try {
+    const res = await apiFetch(`${API}/upload`, { method: 'POST', body: formData }, 60000);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'Upload failed');
+    entry.url = data.data.url;
+  } catch (err) {
+    entry.error = err.message || 'Upload failed';
+    toast(`Failed to upload ${entry.name}: ${entry.error}`, 'error');
+  } finally {
+    entry.uploading = false;
+    renderFileList();
+  }
 }
 
 function renderFileList() {
@@ -672,9 +695,15 @@ function renderFileList() {
         <div class="flex items-center gap-2 min-w-0">
           <i class="fa-solid fa-file-pdf text-red-400 text-lg flex-shrink-0"></i>
           <span class="text-sm font-medium text-gray-800 truncate">${f.name}</span>
+          ${f.uploading
+            ? '<span class="spinner flex-shrink-0" style="width:0.85rem;height:0.85rem;border-width:2px;"></span>'
+            : f.error
+              ? '<i class="fa-solid fa-triangle-exclamation text-red-500 text-sm flex-shrink-0" title="' + f.error.replace(/"/g,'&quot;') + '"></i>'
+              : '<i class="fa-solid fa-circle-check text-green-500 text-sm flex-shrink-0" title="Uploaded"></i>'}
         </div>
         <button onclick="removeFile(${i})" class="text-gray-300 hover:text-red-500 transition flex-shrink-0"><i class="fa-solid fa-trash-can text-sm"></i></button>
       </div>
+      ${f.error ? `<p class="text-xs text-red-500 mb-2">${f.error} — remove and try again</p>` : ''}
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         <div class="col-span-2 sm:col-span-3">
           <label class="text-gray-500 mb-1 block">Service</label>
@@ -819,6 +848,9 @@ async function renderReview() {
 
 // ═══════════════════════ SUBMIT ORDER ═════════════════
 async function submitOrder() {
+  if (files.some(f => f.uploading)) { toast('Please wait for files to finish uploading', 'error'); return; }
+  if (files.some(f => f.error || !f.url)) { toast('Remove files that failed to upload before submitting', 'error'); return; }
+
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Submitting…';
@@ -830,7 +862,8 @@ async function submitOrder() {
       phone: document.getElementById('st-phone').value.trim(),
       matricNumber: document.getElementById('st-matric').value.trim(),
     },
-    files,
+    files: files.map(({ name, url, pages, copies, serviceType, paperSize, doubleSided, binding }) =>
+      ({ name, url, pages, copies, serviceType, paperSize, doubleSided, binding })),
     pickupLocation: document.getElementById('st-pickup').value,
     specialInstructions: document.getElementById('st-notes').value.trim(),
     referralCode: document.getElementById('st-referral').value.trim().toUpperCase() || undefined,
@@ -1073,6 +1106,7 @@ async function adminLoadOrders() {
     if (!data.success) throw new Error(data.message);
 
     const orders = data.data;
+    adminOrdersCache = orders;
     if (!orders.length) {
       el.innerHTML = '<p class="text-center py-10 text-sm text-gray-400">No orders found</p>';
       return;
@@ -1127,6 +1161,17 @@ function openModal(orderId, currentStatus) {
   document.getElementById('modal-order-id').textContent = orderId;
   document.getElementById('modal-status').value = currentStatus;
   document.getElementById('modal-notes').value = '';
+
+  const order = adminOrdersCache.find(o => o.orderId === orderId);
+  const origin = API.replace(/\/api$/, '');
+  document.getElementById('modal-files').innerHTML = (order?.files || []).map(f => `
+    <a href="${f.url ? origin + f.url : '#'}" target="_blank" rel="noopener"
+       class="flex items-center gap-2 text-xs ${f.url ? 'text-blue-600 hover:text-blue-800' : 'text-gray-400'} truncate">
+      <i class="fa-solid fa-${f.url ? 'file-arrow-down' : 'triangle-exclamation'}"></i>
+      <span class="truncate">${f.name}${f.url ? '' : ' (not uploaded)'}</span>
+    </a>
+  `).join('') || '<p class="text-xs text-gray-400">No files</p>';
+
   document.getElementById('status-modal').classList.remove('hidden');
 }
 

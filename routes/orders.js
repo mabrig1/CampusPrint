@@ -30,6 +30,9 @@ router.post('/', async (req, res, next) => {
     if (!files?.length) {
       return res.status(400).json({ success: false, message: 'At least one file is required' });
     }
+    if (files.some(f => !f.url)) {
+      return res.status(400).json({ success: false, message: 'One or more files failed to upload. Please re-upload and try again.' });
+    }
 
     // Validate referral code if provided
     let referral = null;
