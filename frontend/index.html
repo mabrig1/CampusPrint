@@ -585,7 +585,7 @@ function showPage(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-blue-50','text-blue-700'));
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('nav-' + name)?.classList.add('bg-blue-50','text-blue-700');
-  if (name === 'admin' && adminSecret) adminLoadOrders();
+  if (name === 'admin' && adminToken) adminLoadOrders();
 }
 
 // ═══════════════════════ TOAST ════════════════════════
