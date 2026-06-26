@@ -211,28 +211,10 @@
         <input id="st-email" type="email" placeholder="you@university.edu.ng" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Phone</label>
+        <label class="block text-sm font-medium text-gray-700 mb-1">Phone <span class="text-red-500">*</span></label>
         <input id="st-phone" type="tel" placeholder="08012345678" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
       </div>
       <div>
-        <label class="block text-sm font-medium text-gray-700 mb-1">Matric Number</label>
-        <input id="st-matric" type="text" placeholder="CSC/2021/001" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
-      </div>
-      <div class="sm:col-span-2">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Location</label>
-        <select id="st-pickup" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
-          <option>Main Library</option>
-          <option>Faculty of Science Block</option>
-          <option>Student Union Building</option>
-          <option>Engineering Complex</option>
-          <option>ICT Centre</option>
-        </select>
-      </div>
-      <div class="sm:col-span-2">
-        <label class="block text-sm font-medium text-gray-700 mb-1">Special Instructions</label>
-        <textarea id="st-notes" rows="2" placeholder="Any specific requirements…" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none"></textarea>
-      </div>
-      <div class="sm:col-span-2">
         <label class="block text-sm font-medium text-gray-700 mb-1">Referral Code <span class="text-xs text-gray-400">(optional)</span></label>
         <input id="st-referral" type="text" placeholder="e.g. JD3K2" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 uppercase" style="text-transform:uppercase" />
       </div>
@@ -627,7 +609,8 @@ function goStep(n) {
   if (n === 2) {
     const name = document.getElementById('st-name').value.trim();
     const email = document.getElementById('st-email').value.trim();
-    if (!name || !email) { toast('Name and email are required', 'error'); return; }
+    const phone = document.getElementById('st-phone').value.trim();
+    if (!name || !email || !phone) { toast('Name, email and phone are required', 'error'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('Please enter a valid email', 'error'); return; }
   }
   if (n === 3) {
@@ -798,10 +781,6 @@ async function renderReview() {
         <span class="text-gray-500">Email</span>
         <span class="font-medium">${document.getElementById('st-email').value}</span>
       </div>
-      <div class="flex justify-between text-sm">
-        <span class="text-gray-500">Pickup</span>
-        <span class="font-medium">${document.getElementById('st-pickup').value}</span>
-      </div>
     </div>
     <div class="border-t border-gray-100 pt-4 mb-4 space-y-2">
       ${breakdown.map(b => `
@@ -829,11 +808,8 @@ async function submitOrder() {
       name: document.getElementById('st-name').value.trim(),
       email: document.getElementById('st-email').value.trim(),
       phone: document.getElementById('st-phone').value.trim(),
-      matricNumber: document.getElementById('st-matric').value.trim(),
     },
     files,
-    pickupLocation: document.getElementById('st-pickup').value,
-    specialInstructions: document.getElementById('st-notes').value.trim(),
     referralCode: document.getElementById('st-referral').value.trim().toUpperCase() || undefined,
   };
 
@@ -912,7 +888,7 @@ function retryPayment() { if (currentOrder) initiatePaystack(currentOrder); }
 
 function resetOrder() {
   files = []; currentOrder = null; currentStep = 1;
-  ['st-name','st-email','st-phone','st-matric','st-notes','st-referral'].forEach(id => document.getElementById(id).value = '');
+  ['st-name','st-email','st-phone','st-referral'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('file-list').innerHTML = '';
   for (let i = 1; i <= 4; i++) {
     document.getElementById('step-' + i).classList.remove('active');
