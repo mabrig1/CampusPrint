@@ -11,7 +11,7 @@ const UPLOAD_DIR = path.join(__dirname, '..', 'uploads');
 
 fs.mkdirSync(UPLOAD_DIR, { recursive: true });
 
-const ALLOWED_EXTENSIONS = new Set(['.pdf', '.doc', '.docx', '.ppt', '.pptx', '.jpg', '.jpeg', '.png']);
+const ALLOWED_EXTENSIONS = new Set(['.pdf', '.doc', '.docx']);
 
 const storage = multer.diskStorage({
   destination: (req, file, cb) => cb(null, UPLOAD_DIR),
@@ -33,7 +33,7 @@ const fileFilter = (req, file, cb) => {
 const upload = multer({
   storage,
   fileFilter,
-  limits: { fileSize: 20 * 1024 * 1024 }, // 20 MB, matches frontend limit
+  limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB, matches frontend limit
 });
 
 const router = express.Router();
@@ -43,7 +43,7 @@ router.post('/', (req, res) => {
   upload.single('file')(req, res, (err) => {
     if (err) {
       const message = err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE'
-        ? 'File exceeds 20 MB limit'
+        ? 'File exceeds 10 MB limit'
         : err.message;
       return res.status(400).json({ success: false, message });
     }
