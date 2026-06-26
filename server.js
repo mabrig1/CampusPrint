@@ -35,7 +35,8 @@ const connectDB = async () => {
     await seedAdmin();
   } catch (err) {
     console.error('❌ MongoDB Error:', err.message);
-    process.exit(1);
+    console.error('   Retrying in 5s — server stays up in the meantime.');
+    setTimeout(connectDB, 5000);
   }
 };
 
