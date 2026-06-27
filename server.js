@@ -8,6 +8,7 @@ import paymentRoutes from './routes/payments.js';
 import adminRoutes from './routes/admin.js';
 import authRoutes from './routes/auth.js';
 import referralRoutes from './routes/referrals.js';
+import uploadRoutes from './routes/uploads.js';
 import { errorHandler } from './middleware/errorHandler.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
@@ -61,6 +62,7 @@ app.use('/api/referrals', referralRoutes);
 app.use('/api/orders', orderRoutes);
 app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/uploads', uploadRoutes);
 
 app.get('/api/health', (req, res) => {
   res.json({

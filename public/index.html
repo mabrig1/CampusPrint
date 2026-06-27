@@ -546,6 +546,7 @@
   <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
     <h3 class="font-bold text-gray-800 text-lg mb-4">Update Order Status</h3>
     <p id="modal-order-id" class="text-xs text-gray-400 font-mono mb-3"></p>
+    <div id="modal-files" class="mb-3"></div>
     <select id="modal-status" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3">
       <option>pending</option><option>confirmed</option><option>printing</option>
       <option>ready</option><option>collected</option><option>cancelled</option>
@@ -576,6 +577,7 @@ let currentOrder = null;
 let adminToken = localStorage.getItem('cp_admin_token') || '';
 let adminUser  = JSON.parse(localStorage.getItem('cp_admin_user') || 'null');
 let modalOrderId = '';
+let adminOrdersCache = [];
 let debounceTimer;
 
 // ═══════════════════════ NAVIGATION ═══════════════════
@@ -614,6 +616,8 @@ function goStep(n) {
   }
   if (n === 3) {
     if (!files.length) { toast('Please add at least one file', 'error'); return; }
+    if (files.some(f => f.uploading)) { toast('Please wait for files to finish uploading', 'error'); return; }
+    if (files.some(f => !f.url)) { toast('Some files failed to upload — remove or retry them', 'error'); return; }
     renderReview();
   }
   document.getElementById('step-' + currentStep).classList.remove('active');
@@ -641,9 +645,37 @@ dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.
 function handleFileInput(fileList) {
   for (const f of fileList) {
     if (f.size > 20 * 1024 * 1024) { toast(`${f.name} exceeds 20 MB limit`, 'error'); continue; }
-    files.push({ name: f.name, pages: 1, copies: 1, serviceType: 'print_bw', paperSize: 'A4', doubleSided: false, binding: 'none' });
+    const entry = { name: f.name, pages: 1, copies: 1, serviceType: 'print_bw', paperSize: 'A4', doubleSided: false, binding: 'none', url: null, uploading: true, uploadError: null, _raw: f };
+    files.push(entry);
+    uploadFile(f, entry);
   }
   renderFileList();
+}
+
+async function uploadFile(rawFile, entry) {
+  try {
+    const formData = new FormData();
+    formData.append('files', rawFile);
+    const res = await apiFetch(`${API}/uploads`, { method: 'POST', body: formData }, 60000);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message || 'Upload failed');
+    entry.url = data.data[0].url;
+  } catch (err) {
+    entry.uploadError = err.message || 'Upload failed';
+    toast(`Failed to upload ${entry.name}`, 'error');
+  } finally {
+    entry.uploading = false;
+    renderFileList();
+  }
+}
+
+function retryUpload(i) {
+  const entry = files[i];
+  if (!entry || !entry._raw) { toast('Please remove this file and re-add it', 'error'); return; }
+  entry.uploading = true;
+  entry.uploadError = null;
+  renderFileList();
+  uploadFile(entry._raw, entry);
 }
 
 function renderFileList() {
@@ -658,6 +690,11 @@ function renderFileList() {
         </div>
         <button onclick="removeFile(${i})" class="text-gray-300 hover:text-red-500 transition flex-shrink-0"><i class="fa-solid fa-trash-can text-sm"></i></button>
       </div>
+      ${f.uploading
+        ? `<div class="flex items-center gap-1.5 text-xs text-blue-500 mb-3"><span class="spinner"></span> Uploading…</div>`
+        : f.uploadError
+          ? `<div class="flex items-center gap-2 text-xs text-red-500 mb-3"><i class="fa-solid fa-circle-exclamation"></i> ${f.uploadError} <button onclick="retryUpload(${i})" class="underline">Retry</button></div>`
+          : `<div class="flex items-center gap-1.5 text-xs text-green-600 mb-3"><i class="fa-solid fa-circle-check"></i> Uploaded</div>`}
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         <div class="col-span-2 sm:col-span-3">
           <label class="text-gray-500 mb-1 block">Service</label>
@@ -808,7 +845,8 @@ async function submitOrder() {
       email: document.getElementById('st-email').value.trim(),
       phone: document.getElementById('st-phone').value.trim(),
     },
-    files,
+    files: files.map(({ name, url, serviceType, pages, copies, colorMode, paperSize, doubleSided, binding, instructions }) =>
+      ({ name, url, serviceType, pages, copies, colorMode, paperSize, doubleSided, binding, instructions })),
     referralCode: document.getElementById('st-referral').value.trim().toUpperCase() || undefined,
   };
 
@@ -1049,6 +1087,7 @@ async function adminLoadOrders() {
     if (!data.success) throw new Error(data.message);
 
     const orders = data.data;
+    adminOrdersCache = orders;
     if (!orders.length) {
       el.innerHTML = '<p class="text-center py-10 text-sm text-gray-400">No orders found</p>';
       return;
@@ -1103,6 +1142,26 @@ function openModal(orderId, currentStatus) {
   document.getElementById('modal-order-id').textContent = orderId;
   document.getElementById('modal-status').value = currentStatus;
   document.getElementById('modal-notes').value = '';
+
+  const order = adminOrdersCache.find(o => o.orderId === orderId);
+  const filesEl = document.getElementById('modal-files');
+  if (order?.files?.length) {
+    filesEl.innerHTML = `
+      <p class="text-xs text-gray-500 mb-1.5">Files to print</p>
+      <div class="space-y-1.5 max-h-40 overflow-y-auto border border-gray-100 rounded-lg p-2">
+        ${order.files.map(f => `
+          <div class="flex items-center justify-between gap-2 text-xs">
+            <span class="truncate text-gray-700">${f.name} <span class="text-gray-400">(${f.pages}p × ${f.copies}, ${f.colorMode === 'color' ? 'colour' : 'B&W'})</span></span>
+            ${f.url
+              ? `<a href="${f.url}" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 font-medium flex-shrink-0"><i class="fa-solid fa-download"></i></a>`
+              : `<span class="text-red-400 flex-shrink-0">no file</span>`}
+          </div>
+        `).join('')}
+      </div>`;
+  } else {
+    filesEl.innerHTML = '';
+  }
+
   document.getElementById('status-modal').classList.remove('hidden');
 }
 
