@@ -24,6 +24,9 @@ app.set('trust proxy', 1); // trust Railway / Cloudflare proxy
 
 // Middleware
 app.use(cors({ origin: true, credentials: true }));
+// Paystack webhook needs the raw body for signature verification —
+// must be parsed before the global json/urlencoded parsers touch it.
+app.use('/api/payments/webhook', express.raw({ type: 'application/json' }));
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 

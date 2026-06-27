@@ -89,7 +89,7 @@ router.get('/verify/:reference', async (req, res, next) => {
 });
 
 // POST /api/payments/webhook — Paystack webhook
-router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
+router.post('/webhook', async (req, res) => {
   const secret = process.env.PAYSTACK_SECRET_KEY;
   const hash = crypto
     .createHmac('sha512', secret)
