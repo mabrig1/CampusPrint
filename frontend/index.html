@@ -569,7 +569,7 @@
 <script>
 // ═══════════════════════ CONFIG ═══════════════════════
 const API = 'https://campusprint-production.up.railway.app/api';
-const PAYSTACK_PK = 'pk_test_your_public_key_here'; // ← replace with your real key
+const PAYSTACK_PK = window.__PAYSTACK_PK__ || 'pk_test_your_public_key_here';
 
 // ═══════════════════════ STATE ════════════════════════
 let files = [];       // { name, pages, copies, colorMode, paperSize, doubleSided, binding }
