@@ -78,7 +78,7 @@ router.get('/verify/:reference', async (req, res, next) => {
         order.payment.paidAt = new Date();
         order.status = 'confirmed';
         await order.save();
-        await notifyOrderConfirmed(order);
+        notifyOrderConfirmed(order);
       }
     }
 
@@ -112,8 +112,8 @@ router.post('/webhook', express.raw({ type: 'application/json' }), async (req, r
       order.status = 'confirmed';
       await order.save();
 
-      await notifyOrderConfirmed(order);
-      await notifyAdministrators(
+      notifyOrderConfirmed(order);
+      notifyAdministrators(
         `Payment received – ${order.orderId}`,
         `<p>Payment confirmed for order <strong>${order.orderId}</strong> by ${order.student.name}.</p>
          <p>Amount: ₦${order.pricing.totalAmount.toLocaleString()}</p>`

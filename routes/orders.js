@@ -59,7 +59,7 @@ router.post('/', async (req, res, next) => {
       await referral.save();
     }
 
-    await notifyAdministrators(
+    notifyAdministrators(
       `New Order ${order.orderId}`,
       `<p>New order from <strong>${student.name}</strong> (${student.email}).</p>
        <p>Total: ₦${pricing.totalAmount.toLocaleString()}</p>

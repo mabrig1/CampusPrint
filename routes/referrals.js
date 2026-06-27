@@ -29,7 +29,7 @@ router.post('/signup', async (req, res, next) => {
 
     const referral = await Referral.create({ name, email, phone, faculty, level, code });
 
-    await notifyAdministrators(
+    notifyAdministrators(
       `New Referral Agent: ${name}`,
       `<p><strong>${name}</strong> (${email}, ${phone}) just signed up as a referral agent.</p>
        <p>Code: <strong>${code}</strong></p>

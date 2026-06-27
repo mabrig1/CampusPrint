@@ -83,7 +83,7 @@ router.patch('/orders/:orderId/status', async (req, res, next) => {
     await order.save();
 
     if (status === 'ready') {
-      await notifyOrderReady(order);
+      notifyOrderReady(order);
     }
 
     res.json({ success: true, data: order });
