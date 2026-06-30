@@ -13,6 +13,7 @@
   "dependencies": {
     "@auth/express": "^0.12.2",
     "@supabase/supabase-js": "^2.109.0",
+    "@uploadcare/upload-client": "^6.18.4",
     "bcryptjs": "^3.0.3",
     "cloudinary": "^2.10.0",
     "cors": "^2.8.5",
