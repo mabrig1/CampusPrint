@@ -8,71 +8,48 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css" />
   <script src="https://js.paystack.co/v1/inline.js"></script>
   <style>
-    :root {
-      --brand: #1d4ed8;
-      --brand-light: #dbeafe;
-      --accent: #f59e0b;
-    }
+    :root { --brand: #1d4ed8; --brand-light: #dbeafe; --accent: #f59e0b; }
     body { font-family: 'Segoe UI', system-ui, sans-serif; }
 
-    /* Step indicator */
-    .step-dot {
-      width: 2.25rem; height: 2.25rem;
-      border-radius: 9999px;
-      display: flex; align-items: center; justify-content: center;
-      font-weight: 700; font-size: .9rem;
-      transition: all .3s;
-    }
-    .step-dot.active   { background: var(--brand); color: #fff; box-shadow: 0 0 0 4px #bfdbfe; }
-    .step-dot.done     { background: #22c55e; color: #fff; }
-    .step-dot.inactive { background: #e5e7eb; color: #9ca3af; }
-    .step-line { flex: 1; height: 2px; background: #e5e7eb; margin: 0 .5rem; transition: background .3s; }
-    .step-line.done { background: #22c55e; }
+    .step-dot { width:2.25rem;height:2.25rem;border-radius:9999px;display:flex;align-items:center;justify-content:center;font-weight:700;font-size:.9rem;transition:all .3s; }
+    .step-dot.active   { background:var(--brand);color:#fff;box-shadow:0 0 0 4px #bfdbfe; }
+    .step-dot.done     { background:#22c55e;color:#fff; }
+    .step-dot.inactive { background:#e5e7eb;color:#9ca3af; }
+    .step-line { flex:1;height:2px;background:#e5e7eb;margin:0 .5rem;transition:background .3s; }
+    .step-line.done { background:#22c55e; }
 
-    /* File card */
-    .file-card {
-      border: 1px solid #e5e7eb;
-      border-radius: .75rem;
-      padding: 1rem 1.25rem;
-      background: #f9fafb;
-      transition: box-shadow .2s;
-    }
-    .file-card:hover { box-shadow: 0 2px 10px rgba(0,0,0,.08); }
+    .file-card { border:1px solid #e5e7eb;border-radius:.75rem;padding:1rem 1.25rem;background:#f9fafb;transition:box-shadow .2s; }
+    .file-card:hover { box-shadow:0 2px 10px rgba(0,0,0,.08); }
 
-    /* Drop zone */
-    #drop-zone {
-      border: 2px dashed #93c5fd;
-      border-radius: .75rem;
-      background: #eff6ff;
-      transition: background .2s, border-color .2s;
-      cursor: pointer;
-    }
-    #drop-zone.drag-over { background: #dbeafe; border-color: var(--brand); }
+    #drop-zone { border:2px dashed #93c5fd;border-radius:.75rem;background:#eff6ff;transition:background .2s,border-color .2s;cursor:pointer; }
+    #drop-zone.drag-over { background:#dbeafe;border-color:var(--brand); }
 
-    /* Slide panels */
-    .panel { display: none; animation: fadeIn .25s ease; }
-    .panel.active { display: block; }
-    @keyframes fadeIn { from { opacity:0; transform: translateY(8px); } to { opacity:1; transform:none; } }
+    .panel { display:none;animation:fadeIn .25s ease; }
+    .panel.active { display:block; }
+    @keyframes fadeIn { from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none} }
 
-    /* Spinner */
-    .spinner { width:1.25rem; height:1.25rem; border:2px solid #fff; border-top-color:transparent; border-radius:50%; animation:spin .6s linear infinite; display:inline-block; }
-    @keyframes spin { to { transform:rotate(360deg); } }
+    .spinner { width:1.25rem;height:1.25rem;border:2px solid #fff;border-top-color:transparent;border-radius:50%;animation:spin .6s linear infinite;display:inline-block; }
+    @keyframes spin { to{transform:rotate(360deg)} }
 
-    /* Status badge */
-    .badge { display:inline-flex; align-items:center; gap:.3rem; padding:.2rem .65rem; border-radius:9999px; font-size:.78rem; font-weight:600; }
-    .badge-pending   { background:#fef3c7; color:#92400e; }
-    .badge-confirmed { background:#dbeafe; color:#1e40af; }
-    .badge-printing  { background:#ede9fe; color:#5b21b6; }
-    .badge-ready     { background:#d1fae5; color:#065f46; }
-    .badge-collected { background:#f0fdf4; color:#166534; }
-    .badge-cancelled { background:#fee2e2; color:#991b1b; }
-    .badge-paid      { background:#d1fae5; color:#065f46; }
-    .badge-unpaid    { background:#fee2e2; color:#991b1b; }
+    .badge { display:inline-flex;align-items:center;gap:.3rem;padding:.2rem .65rem;border-radius:9999px;font-size:.78rem;font-weight:600; }
+    .badge-pending   { background:#fef3c7;color:#92400e; }
+    .badge-confirmed { background:#dbeafe;color:#1e40af; }
+    .badge-printing  { background:#ede9fe;color:#5b21b6; }
+    .badge-ready     { background:#d1fae5;color:#065f46; }
+    .badge-collected { background:#f0fdf4;color:#166534; }
+    .badge-cancelled { background:#fee2e2;color:#991b1b; }
+    .badge-paid      { background:#d1fae5;color:#065f46; }
+    .badge-unpaid    { background:#fee2e2;color:#991b1b; }
+
+    /* Preview modal */
+    #preview-modal { position:fixed;inset:0;background:rgba(0,0,0,.85);display:flex;align-items:center;justify-content:center;z-index:1000;padding:1rem; }
+    #preview-modal.hidden { display:none; }
+    #preview-frame { width:100%;height:100%;border:none;border-radius:.5rem; }
   </style>
 </head>
 <body class="bg-gray-50 min-h-screen">
 
-<!-- ════════════════════  NAVBAR  ════════════════════ -->
+<!-- NAVBAR -->
 <nav class="bg-white border-b border-gray-200 sticky top-0 z-50">
   <div class="max-w-5xl mx-auto px-4 h-14 flex items-center justify-between">
     <a href="#" onclick="showPage('home')" class="flex items-center gap-2 font-bold text-blue-700 text-lg">
@@ -81,6 +58,7 @@
     <div class="flex gap-1">
       <button onclick="showPage('home')"     id="nav-home"     class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Home</button>
       <button onclick="showPage('order')"    id="nav-order"    class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">New Order</button>
+      <button onclick="showPage('history')"  id="nav-history"  class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">History</button>
       <button onclick="showPage('track')"    id="nav-track"    class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Track</button>
       <button onclick="showPage('referral')" id="nav-referral" class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-green-600 hover:bg-green-50">Earn ₦</button>
       <button onclick="showPage('admin')"    id="nav-admin"    class="nav-btn px-3 py-1.5 rounded-lg text-sm font-medium text-gray-600 hover:bg-gray-100">Admin</button>
@@ -88,7 +66,7 @@
   </div>
 </nav>
 
-<!-- ════════════════════  TOAST  ════════════════════ -->
+<!-- TOAST -->
 <div id="toast" class="fixed top-4 right-4 z-[999] hidden max-w-xs">
   <div id="toast-inner" class="flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-sm text-white font-medium">
     <i id="toast-icon" class="mt-0.5 text-base"></i>
@@ -96,7 +74,7 @@
   </div>
 </div>
 
-<!-- ════════════════════  HOME PAGE  ════════════════════ -->
+<!-- HOME PAGE -->
 <div id="page-home" class="panel active max-w-5xl mx-auto px-4 py-12">
   <div class="text-center mb-12">
     <div class="inline-flex items-center justify-center w-16 h-16 bg-blue-100 rounded-2xl mb-4">
@@ -109,92 +87,63 @@
     </button>
   </div>
 
-  <!-- Features -->
   <div class="grid sm:grid-cols-3 gap-5 mb-12">
     <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm text-center">
-      <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-        <i class="fa-solid fa-bolt text-amber-500"></i>
-      </div>
+      <div class="w-10 h-10 bg-amber-100 rounded-xl flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-bolt text-amber-500"></i></div>
       <h3 class="font-semibold text-gray-800 mb-1">Fast Turnaround</h3>
       <p class="text-sm text-gray-500">Most orders ready within 2–4 hours</p>
     </div>
     <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm text-center">
-      <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-        <i class="fa-solid fa-shield-halved text-green-600"></i>
-      </div>
+      <div class="w-10 h-10 bg-green-100 rounded-xl flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-shield-halved text-green-600"></i></div>
       <h3 class="font-semibold text-gray-800 mb-1">Secure Payments</h3>
       <p class="text-sm text-gray-500">Powered by Paystack – card, bank, USSD</p>
     </div>
     <div class="bg-white rounded-2xl p-5 border border-gray-100 shadow-sm text-center">
-      <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3">
-        <i class="fa-solid fa-location-dot text-purple-600"></i>
-      </div>
+      <div class="w-10 h-10 bg-purple-100 rounded-xl flex items-center justify-center mx-auto mb-3"><i class="fa-solid fa-location-dot text-purple-600"></i></div>
       <h3 class="font-semibold text-gray-800 mb-1">Easy Pickup</h3>
       <p class="text-sm text-gray-500">Multiple pickup points on campus</p>
     </div>
   </div>
 
-  <!-- Pricing table -->
+  <!-- Accepted file types -->
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6 mb-6">
+    <h2 class="font-bold text-gray-800 text-lg mb-4"><i class="fa-solid fa-file-circle-check text-blue-600 mr-2"></i>Accepted File Types</h2>
+    <div class="flex flex-wrap gap-3">
+      <span class="flex items-center gap-2 bg-red-50 text-red-700 px-3 py-1.5 rounded-lg text-sm font-medium"><i class="fa-solid fa-file-pdf"></i> PDF</span>
+      <span class="flex items-center gap-2 bg-blue-50 text-blue-700 px-3 py-1.5 rounded-lg text-sm font-medium"><i class="fa-solid fa-file-word"></i> Word (.doc, .docx)</span>
+      <span class="flex items-center gap-2 bg-orange-50 text-orange-700 px-3 py-1.5 rounded-lg text-sm font-medium"><i class="fa-solid fa-file-powerpoint"></i> PowerPoint (.pptx)</span>
+      <span class="flex items-center gap-2 bg-green-50 text-green-700 px-3 py-1.5 rounded-lg text-sm font-medium"><i class="fa-solid fa-file-image"></i> Images (.jpg, .png)</span>
+      <span class="flex items-center gap-2 bg-gray-50 text-gray-600 px-3 py-1.5 rounded-lg text-sm font-medium"><i class="fa-solid fa-arrow-up-from-bracket"></i> Max 50 MB per file</span>
+    </div>
+  </div>
+
   <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
     <h2 class="font-bold text-gray-800 text-lg mb-4"><i class="fa-solid fa-tags text-blue-600 mr-2"></i>Pricing</h2>
     <div class="overflow-x-auto">
       <table class="w-full text-sm">
-        <thead>
-          <tr class="border-b border-gray-100 text-gray-500 text-xs uppercase tracking-wide">
-            <th class="text-left py-2 pr-4">Service</th>
-            <th class="py-2 px-3 text-left">Rate</th>
-          </tr>
-        </thead>
+        <thead><tr class="border-b border-gray-100 text-gray-500 text-xs uppercase tracking-wide"><th class="text-left py-2 pr-4">Service</th><th class="py-2 px-3 text-left">Rate</th></tr></thead>
         <tbody class="text-gray-700">
-          <tr class="border-b border-gray-50">
-            <td class="py-2 pr-4 font-medium">B&amp;W Print</td>
-            <td class="py-2 px-3">1–4 pages ₦50/pg &nbsp;·&nbsp; 5–9 pages ₦40/pg &nbsp;·&nbsp; 10+ pages ₦30/pg</td>
-          </tr>
-          <tr class="border-b border-gray-50">
-            <td class="py-2 pr-4 font-medium">Colour Print</td>
-            <td class="py-2 px-3">₦200/page (all sizes)</td>
-          </tr>
-          <tr class="border-b border-gray-50">
-            <td class="py-2 pr-4 font-medium">Editing / Formatting</td>
-            <td class="py-2 px-3">₦50/page</td>
-          </tr>
-          <tr class="border-b border-gray-50">
-            <td class="py-2 pr-4 font-medium">Binding</td>
-            <td class="py-2 px-3">Staple +₦50 &nbsp;·&nbsp; Spiral +₦200 &nbsp;·&nbsp; Hardcover +₦1,500</td>
-          </tr>
-          <tr>
-            <td class="py-2 pr-4 font-medium">Premium Services</td>
-            <td class="py-2 px-3">CV Design ₦2,000 &nbsp;·&nbsp; Thesis Formatting ₦5,000 &nbsp;·&nbsp; Passport Photos ₦1,500</td>
-          </tr>
+          <tr class="border-b border-gray-50"><td class="py-2 pr-4 font-medium">B&amp;W Print</td><td class="py-2 px-3">1–4 pages ₦50/pg &nbsp;·&nbsp; 5–9 pages ₦40/pg &nbsp;·&nbsp; 10+ pages ₦30/pg</td></tr>
+          <tr class="border-b border-gray-50"><td class="py-2 pr-4 font-medium">Colour Print</td><td class="py-2 px-3">₦200/page</td></tr>
+          <tr class="border-b border-gray-50"><td class="py-2 pr-4 font-medium">Editing / Formatting</td><td class="py-2 px-3">₦50/page</td></tr>
+          <tr class="border-b border-gray-50"><td class="py-2 pr-4 font-medium">Binding</td><td class="py-2 px-3">Staple +₦50 &nbsp;·&nbsp; Spiral +₦200 &nbsp;·&nbsp; Hardcover +₦1,500</td></tr>
+          <tr><td class="py-2 pr-4 font-medium">Premium Services</td><td class="py-2 px-3">CV Design ₦2,000 &nbsp;·&nbsp; Thesis Formatting ₦5,000 &nbsp;·&nbsp; Passport Photos ₦1,500</td></tr>
         </tbody>
       </table>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════  ORDER PAGE  ════════════════════ -->
+<!-- ORDER PAGE -->
 <div id="page-order" class="panel max-w-3xl mx-auto px-4 py-10">
-  <!-- Step indicator -->
   <div class="flex items-center justify-center mb-8">
-    <div class="flex flex-col items-center gap-1">
-      <div id="s1-dot" class="step-dot active">1</div>
-      <span class="text-xs font-medium text-blue-700">Details</span>
-    </div>
+    <div class="flex flex-col items-center gap-1"><div id="s1-dot" class="step-dot active">1</div><span class="text-xs font-medium text-blue-700">Details</span></div>
     <div id="line-1-2" class="step-line"></div>
-    <div class="flex flex-col items-center gap-1">
-      <div id="s2-dot" class="step-dot inactive">2</div>
-      <span class="text-xs font-medium text-gray-400">Files</span>
-    </div>
+    <div class="flex flex-col items-center gap-1"><div id="s2-dot" class="step-dot inactive">2</div><span class="text-xs font-medium text-gray-400">Files</span></div>
     <div id="line-2-3" class="step-line"></div>
-    <div class="flex flex-col items-center gap-1">
-      <div id="s3-dot" class="step-dot inactive">3</div>
-      <span class="text-xs font-medium text-gray-400">Review</span>
-    </div>
+    <div class="flex flex-col items-center gap-1"><div id="s3-dot" class="step-dot inactive">3</div><span class="text-xs font-medium text-gray-400">Review</span></div>
     <div id="line-3-4" class="step-line"></div>
-    <div class="flex flex-col items-center gap-1">
-      <div id="s4-dot" class="step-dot inactive">4</div>
-      <span class="text-xs font-medium text-gray-400">Payment</span>
-    </div>
+    <div class="flex flex-col items-center gap-1"><div id="s4-dot" class="step-dot inactive">4</div><span class="text-xs font-medium text-gray-400">Payment</span></div>
   </div>
 
   <!-- Step 1: Student Details -->
@@ -220,11 +169,8 @@
       <div class="sm:col-span-2">
         <label class="block text-sm font-medium text-gray-700 mb-1">Pickup Location</label>
         <select id="st-pickup" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
-          <option>Main Library</option>
-          <option>Faculty of Science Block</option>
-          <option>Student Union Building</option>
-          <option>Engineering Complex</option>
-          <option>ICT Centre</option>
+          <option>Main Library</option><option>Faculty of Science Block</option>
+          <option>Student Union Building</option><option>Engineering Complex</option><option>ICT Centre</option>
         </select>
       </div>
       <div class="sm:col-span-2">
@@ -243,13 +189,23 @@
 
   <!-- Step 2: Files -->
   <div id="step-2" class="panel bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
-    <h2 class="font-bold text-gray-800 text-xl mb-5"><i class="fa-solid fa-file-lines text-blue-600 mr-2"></i>Upload Files</h2>
+    <h2 class="font-bold text-gray-800 text-xl mb-2"><i class="fa-solid fa-file-lines text-blue-600 mr-2"></i>Upload Files</h2>
+    <p class="text-xs text-gray-400 mb-5">PDF, Word, PPTX, JPG, PNG · max 50 MB each</p>
 
     <div id="drop-zone" class="flex flex-col items-center justify-center py-10 mb-5" onclick="document.getElementById('file-input').click()">
       <i class="fa-solid fa-cloud-arrow-up text-blue-400 text-3xl mb-3"></i>
       <p class="text-sm font-medium text-blue-700">Click to browse or drag &amp; drop</p>
-      <p class="text-xs text-gray-400 mt-1">PDF or Word (.doc/.docx) · max 10 MB per file</p>
-      <input id="file-input" type="file" multiple accept=".pdf,.doc,.docx" class="hidden" onchange="handleFileInput(this.files)" />
+      <p class="text-xs text-gray-400 mt-1">PDF · Word · PPTX · JPG · PNG · max 50 MB per file</p>
+      <input id="file-input" type="file" multiple accept=".pdf,.doc,.docx,.pptx,.jpg,.jpeg,.png" class="hidden" onchange="handleFileInput(this.files)" />
+    </div>
+
+    <!-- Upload from history shortcut -->
+    <div id="history-shortcut" class="hidden mb-4 bg-blue-50 border border-blue-100 rounded-xl p-3">
+      <div class="flex items-center justify-between mb-2">
+        <span class="text-sm font-medium text-blue-700"><i class="fa-solid fa-clock-rotate-left mr-1"></i>Recent uploads</span>
+        <button onclick="document.getElementById('history-shortcut').classList.add('hidden')" class="text-blue-400 hover:text-blue-600 text-xs">Dismiss</button>
+      </div>
+      <div id="history-shortcut-list" class="space-y-1.5"></div>
     </div>
 
     <div id="file-list" class="space-y-3"></div>
@@ -266,9 +222,7 @@
     <div id="review-content"></div>
     <div class="mt-5 flex justify-between">
       <button onclick="goStep(2)" class="text-gray-500 hover:text-gray-700 font-medium px-4 py-2.5 rounded-xl border border-gray-200 hover:border-gray-300 transition text-sm"><i class="fa-solid fa-arrow-left mr-1"></i> Back</button>
-      <button id="submit-btn" onclick="submitOrder()" class="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-2.5 rounded-xl transition">
-        Submit &amp; Pay <i class="fa-solid fa-lock ml-1"></i>
-      </button>
+      <button id="submit-btn" onclick="submitOrder()" class="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-2.5 rounded-xl transition">Submit &amp; Pay <i class="fa-solid fa-lock ml-1"></i></button>
     </div>
   </div>
 
@@ -279,9 +233,7 @@
       <p class="text-gray-600 font-medium">Initialising payment…</p>
     </div>
     <div id="payment-success" class="hidden py-8">
-      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <i class="fa-solid fa-check text-green-600 text-2xl"></i>
-      </div>
+      <div class="w-16 h-16 bg-green-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-check text-green-600 text-2xl"></i></div>
       <h3 class="text-xl font-bold text-gray-800 mb-2">Payment Confirmed!</h3>
       <p id="success-orderId" class="text-blue-600 font-mono font-semibold text-lg mb-1"></p>
       <p class="text-gray-500 text-sm mb-5">Check your email for confirmation. Your print will be ready soon.</p>
@@ -289,9 +241,7 @@
       <button onclick="showPage('track')" class="border border-gray-200 text-gray-600 hover:border-gray-300 font-semibold px-6 py-2.5 rounded-xl transition">Track Order</button>
     </div>
     <div id="payment-error" class="hidden py-8">
-      <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4">
-        <i class="fa-solid fa-xmark text-red-500 text-2xl"></i>
-      </div>
+      <div class="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-xmark text-red-500 text-2xl"></i></div>
       <h3 class="text-xl font-bold text-gray-800 mb-2">Payment Failed</h3>
       <p id="payment-error-msg" class="text-gray-500 text-sm mb-5">Please try again or contact support.</p>
       <button onclick="retryPayment()" class="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-6 py-2.5 rounded-xl transition">Retry Payment</button>
@@ -299,7 +249,21 @@
   </div>
 </div>
 
-<!-- ════════════════════  TRACK PAGE  ════════════════════ -->
+<!-- UPLOAD HISTORY PAGE -->
+<div id="page-history" class="panel max-w-3xl mx-auto px-4 py-10">
+  <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+    <h2 class="font-bold text-gray-800 text-xl mb-5"><i class="fa-solid fa-clock-rotate-left text-blue-600 mr-2"></i>Upload History</h2>
+    <div class="flex gap-2 mb-5">
+      <input id="history-email-input" type="email" placeholder="Enter your email to view uploads…"
+        class="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
+        onkeydown="if(event.key==='Enter')loadHistory()" />
+      <button onclick="loadHistory()" class="bg-blue-700 hover:bg-blue-800 text-white font-semibold px-5 py-2.5 rounded-lg transition text-sm">Load</button>
+    </div>
+    <div id="history-result"></div>
+  </div>
+</div>
+
+<!-- TRACK PAGE -->
 <div id="page-track" class="panel max-w-xl mx-auto px-4 py-10">
   <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
     <h2 class="font-bold text-gray-800 text-xl mb-5"><i class="fa-solid fa-magnifying-glass text-blue-600 mr-2"></i>Track Your Order</h2>
@@ -311,91 +275,44 @@
   </div>
 </div>
 
-<!-- ════════════════════  REFERRAL PAGE  ════════════════════ -->
+<!-- REFERRAL PAGE -->
 <div id="page-referral" class="panel max-w-4xl mx-auto px-4 py-10">
-
-  <!-- Hero -->
   <div class="bg-gradient-to-br from-green-600 to-emerald-700 rounded-2xl p-7 text-white text-center mb-8 shadow-lg">
-    <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4">
-      <i class="fa-solid fa-hand-holding-dollar text-2xl"></i>
-    </div>
+    <div class="w-14 h-14 bg-white/20 rounded-2xl flex items-center justify-center mx-auto mb-4"><i class="fa-solid fa-hand-holding-dollar text-2xl"></i></div>
     <h2 class="text-2xl font-bold mb-2">Earn Money Referring Students</h2>
-    <p class="text-green-100 max-w-md mx-auto text-sm">Get <strong class="text-white">₦5 for every page</strong> printed by students you refer. No limit — the more you refer, the more you earn.</p>
+    <p class="text-green-100 max-w-md mx-auto text-sm">Get <strong class="text-white">₦5 for every page</strong> printed by students you refer.</p>
     <div class="grid grid-cols-3 gap-3 mt-6 max-w-sm mx-auto">
-      <div class="bg-white/15 rounded-xl p-3 text-center">
-        <p class="text-xl font-bold">₦5</p>
-        <p class="text-xs text-green-100">per page</p>
-      </div>
-      <div class="bg-white/15 rounded-xl p-3 text-center">
-        <p class="text-xl font-bold">₦150</p>
-        <p class="text-xs text-green-100">per 30-page job</p>
-      </div>
-      <div class="bg-white/15 rounded-xl p-3 text-center">
-        <p class="text-xl font-bold">∞</p>
-        <p class="text-xs text-green-100">no cap</p>
-      </div>
+      <div class="bg-white/15 rounded-xl p-3 text-center"><p class="text-xl font-bold">₦5</p><p class="text-xs text-green-100">per page</p></div>
+      <div class="bg-white/15 rounded-xl p-3 text-center"><p class="text-xl font-bold">₦150</p><p class="text-xs text-green-100">per 30-page job</p></div>
+      <div class="bg-white/15 rounded-xl p-3 text-center"><p class="text-xl font-bold">∞</p><p class="text-xs text-green-100">no cap</p></div>
     </div>
   </div>
-
   <div class="grid sm:grid-cols-2 gap-6">
-
-    <!-- SIGNUP FORM -->
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
       <h3 class="font-bold text-gray-800 text-lg mb-1"><i class="fa-solid fa-user-plus text-green-600 mr-2"></i>Join as Referral Agent</h3>
       <p class="text-xs text-gray-400 mb-5">Free to join. Get your unique code instantly.</p>
-
       <div id="signup-success" class="hidden mb-4 bg-green-50 border border-green-200 rounded-xl p-4 text-center">
         <i class="fa-solid fa-circle-check text-green-600 text-2xl mb-2 block"></i>
-        <p class="font-bold text-green-800 mb-1">You're in! 🎉</p>
+        <p class="font-bold text-green-800 mb-1">You're in!</p>
         <p class="text-sm text-green-700 mb-3">Your referral code is:</p>
         <div class="bg-white border-2 border-green-400 rounded-xl py-3 px-4 text-2xl font-mono font-bold text-green-700 tracking-widest mb-3" id="new-code-display"></div>
-        <button onclick="copyCode()" class="text-xs text-green-600 font-medium border border-green-200 px-3 py-1.5 rounded-lg hover:bg-green-50 transition">
-          <i class="fa-solid fa-copy mr-1"></i>Copy Link
-        </button>
+        <button onclick="copyCode()" class="text-xs text-green-600 font-medium border border-green-200 px-3 py-1.5 rounded-lg hover:bg-green-50 transition"><i class="fa-solid fa-copy mr-1"></i>Copy Link</button>
       </div>
-
       <div id="signup-form-wrap">
-        <div id="signup-error" class="hidden mb-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-600">
-          <i class="fa-solid fa-circle-xmark mr-1"></i><span id="signup-error-msg"></span>
-        </div>
+        <div id="signup-error" class="hidden mb-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-600"><i class="fa-solid fa-circle-xmark mr-1"></i><span id="signup-error-msg"></span></div>
         <div class="space-y-3">
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Full Name *</label>
-            <input id="ref-name" type="text" placeholder="e.g. Chidi Okeke" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Email *</label>
-            <input id="ref-email" type="email" placeholder="you@example.com" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" />
-          </div>
-          <div>
-            <label class="block text-xs font-medium text-gray-600 mb-1">Phone *</label>
-            <input id="ref-phone" type="tel" placeholder="08012345678" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" />
-          </div>
+          <div><label class="block text-xs font-medium text-gray-600 mb-1">Full Name *</label><input id="ref-name" type="text" placeholder="e.g. Chidi Okeke" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" /></div>
+          <div><label class="block text-xs font-medium text-gray-600 mb-1">Email *</label><input id="ref-email" type="email" placeholder="you@example.com" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" /></div>
+          <div><label class="block text-xs font-medium text-gray-600 mb-1">Phone *</label><input id="ref-phone" type="tel" placeholder="08012345678" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" /></div>
           <div class="grid grid-cols-2 gap-3">
-            <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">Faculty</label>
-              <input id="ref-faculty" type="text" placeholder="e.g. Science" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" />
-            </div>
-            <div>
-              <label class="block text-xs font-medium text-gray-600 mb-1">Level</label>
-              <select id="ref-level" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300">
-                <option value="">Select</option>
-                <option>100L</option><option>200L</option><option>300L</option>
-                <option>400L</option><option>500L</option><option>Postgrad</option>
-              </select>
-            </div>
+            <div><label class="block text-xs font-medium text-gray-600 mb-1">Faculty</label><input id="ref-faculty" type="text" placeholder="e.g. Science" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300" /></div>
+            <div><label class="block text-xs font-medium text-gray-600 mb-1">Level</label><select id="ref-level" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-green-300"><option value="">Select</option><option>100L</option><option>200L</option><option>300L</option><option>400L</option><option>500L</option><option>Postgrad</option></select></div>
           </div>
-          <button id="signup-btn" onclick="referralSignup()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
-            <i class="fa-solid fa-bolt"></i> Get My Referral Code
-          </button>
+          <button id="signup-btn" onclick="referralSignup()" class="w-full bg-green-600 hover:bg-green-700 text-white font-semibold py-2.5 rounded-xl transition flex items-center justify-center gap-2"><i class="fa-solid fa-bolt"></i> Get My Referral Code</button>
         </div>
       </div>
     </div>
-
-    <!-- AGENT DASHBOARD -->
     <div class="space-y-5">
-
-      <!-- Check earnings -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h3 class="font-bold text-gray-800 text-lg mb-4"><i class="fa-solid fa-chart-line text-blue-600 mr-2"></i>Check My Earnings</h3>
         <div class="flex gap-2 mb-4">
@@ -404,128 +321,61 @@
         </div>
         <div id="earnings-result"></div>
       </div>
-
-      <!-- How it works -->
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
         <h3 class="font-bold text-gray-800 mb-4"><i class="fa-solid fa-circle-info text-amber-500 mr-2"></i>How It Works</h3>
         <ol class="space-y-3 text-sm text-gray-600">
-          <li class="flex gap-3">
-            <span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">1</span>
-            <span>Sign up and get your unique referral code</span>
-          </li>
-          <li class="flex gap-3">
-            <span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">2</span>
-            <span>Share your link with students in your hostel, faculty, and class</span>
-          </li>
-          <li class="flex gap-3">
-            <span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">3</span>
-            <span>They enter your code when placing an order</span>
-          </li>
-          <li class="flex gap-3">
-            <span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">4</span>
-            <span>You earn <strong class="text-green-700">₦5 for every page</strong> they print — paid monthly via bank transfer</span>
-          </li>
+          <li class="flex gap-3"><span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">1</span><span>Sign up and get your unique referral code</span></li>
+          <li class="flex gap-3"><span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">2</span><span>Share your link with students in your hostel, faculty, and class</span></li>
+          <li class="flex gap-3"><span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">3</span><span>They enter your code when placing an order</span></li>
+          <li class="flex gap-3"><span class="w-6 h-6 bg-green-100 text-green-700 rounded-full flex items-center justify-center font-bold text-xs flex-shrink-0 mt-0.5">4</span><span>You earn <strong class="text-green-700">₦5 for every page</strong> they print — paid monthly</span></li>
         </ol>
-        <div class="mt-4 bg-amber-50 border border-amber-100 rounded-xl p-3 text-xs text-amber-700">
-          <i class="fa-solid fa-lightbulb mr-1"></i>
-          <strong>Example:</strong> If 20 students each print 30 pages using your code → <strong>₦3,000</strong> earned in one batch!
-        </div>
       </div>
-
     </div>
   </div>
 </div>
 
-<!-- ════════════════════  ADMIN PAGE  ════════════════════ -->
+<!-- ADMIN PAGE -->
 <div id="page-admin" class="panel max-w-5xl mx-auto px-4 py-10">
-  <!-- Auth -->
   <div id="admin-auth" class="max-w-sm mx-auto bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
     <div class="flex items-center gap-3 mb-5">
-      <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center">
-        <i class="fa-solid fa-shield-halved text-blue-700"></i>
-      </div>
-      <div>
-        <h2 class="font-bold text-gray-800 text-lg leading-tight">Admin Login</h2>
-        <p class="text-xs text-gray-400">CampusPrint Dashboard</p>
-      </div>
+      <div class="w-10 h-10 bg-blue-100 rounded-xl flex items-center justify-center"><i class="fa-solid fa-shield-halved text-blue-700"></i></div>
+      <div><h2 class="font-bold text-gray-800 text-lg leading-tight">Admin Login</h2><p class="text-xs text-gray-400">CampusPrint Dashboard</p></div>
     </div>
-    <div id="auth-error" class="hidden mb-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-600 flex items-center gap-2">
-      <i class="fa-solid fa-circle-xmark"></i><span id="auth-error-msg"></span>
-    </div>
+    <div id="auth-error" class="hidden mb-3 bg-red-50 border border-red-100 rounded-lg px-3 py-2 text-sm text-red-600 flex items-center gap-2"><i class="fa-solid fa-circle-xmark"></i><span id="auth-error-msg"></span></div>
     <div class="space-y-3">
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Username</label>
-        <input id="admin-username" type="text" placeholder="admin" autocomplete="username"
-          class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-          onkeydown="if(event.key==='Enter')document.getElementById('admin-password').focus()" />
-      </div>
-      <div>
-        <label class="block text-xs font-medium text-gray-600 mb-1">Password</label>
-        <div class="relative">
-          <input id="admin-password" type="password" placeholder="••••••••" autocomplete="current-password"
-            class="w-full border border-gray-200 rounded-lg px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300"
-            onkeydown="if(event.key==='Enter')adminLogin()" />
-          <button type="button" onclick="togglePw()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600">
-            <i id="pw-eye" class="fa-solid fa-eye text-sm"></i>
-          </button>
+      <div><label class="block text-xs font-medium text-gray-600 mb-1">Username</label><input id="admin-username" type="text" placeholder="admin" autocomplete="username" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" onkeydown="if(event.key==='Enter')document.getElementById('admin-password').focus()" /></div>
+      <div><label class="block text-xs font-medium text-gray-600 mb-1">Password</label>
+        <div class="relative"><input id="admin-password" type="password" placeholder="••••••••" autocomplete="current-password" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 pr-10 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" onkeydown="if(event.key==='Enter')adminLogin()" />
+          <button type="button" onclick="togglePw()" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><i id="pw-eye" class="fa-solid fa-eye text-sm"></i></button>
         </div>
       </div>
     </div>
-    <button id="login-btn" onclick="adminLogin()" class="mt-4 w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-xl transition flex items-center justify-center gap-2">
-      <i class="fa-solid fa-right-to-bracket"></i> Sign In
-    </button>
+    <button id="login-btn" onclick="adminLogin()" class="mt-4 w-full bg-blue-700 hover:bg-blue-800 text-white font-semibold py-2.5 rounded-xl transition flex items-center justify-center gap-2"><i class="fa-solid fa-right-to-bracket"></i> Sign In</button>
   </div>
 
-  <!-- Dashboard -->
   <div id="admin-dash" class="hidden">
     <div class="flex items-center justify-between mb-6">
-      <div>
-        <h2 class="font-bold text-gray-800 text-xl"><i class="fa-solid fa-gauge text-blue-600 mr-2"></i>Admin Dashboard</h2>
-        <p class="text-xs text-gray-400 mt-0.5">Logged in as <span id="admin-username-display" class="font-semibold text-gray-600"></span></p>
-      </div>
-      <button onclick="adminLogout()" class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-500 border border-gray-200 px-3 py-1.5 rounded-lg transition">
-        <i class="fa-solid fa-right-from-bracket"></i> Logout
-      </button>
+      <div><h2 class="font-bold text-gray-800 text-xl"><i class="fa-solid fa-gauge text-blue-600 mr-2"></i>Admin Dashboard</h2><p class="text-xs text-gray-400 mt-0.5">Logged in as <span id="admin-username-display" class="font-semibold text-gray-600"></span></p></div>
+      <button onclick="adminLogout()" class="flex items-center gap-1.5 text-xs text-gray-500 hover:text-red-500 border border-gray-200 px-3 py-1.5 rounded-lg transition"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
     </div>
-
-    <!-- Stats -->
     <div id="stats-row" class="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-7"></div>
-
-    <!-- Filters -->
     <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 mb-5">
       <div class="flex flex-wrap gap-3 items-center">
         <input id="admin-search" type="text" placeholder="Search name / order ID / email…" class="flex-1 min-w-[180px] border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" oninput="debounceAdminLoad()" />
         <select id="admin-status-filter" onchange="adminLoadOrders()" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
-          <option value="">All Statuses</option>
-          <option>pending</option><option>confirmed</option><option>printing</option>
-          <option>ready</option><option>collected</option><option>cancelled</option>
+          <option value="">All Statuses</option><option>pending</option><option>confirmed</option><option>printing</option><option>ready</option><option>collected</option><option>cancelled</option>
         </select>
         <select id="admin-payment-filter" onchange="adminLoadOrders()" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300">
-          <option value="">All Payments</option>
-          <option value="paid">Paid</option>
-          <option value="unpaid">Unpaid</option>
+          <option value="">All Payments</option><option value="paid">Paid</option><option value="unpaid">Unpaid</option>
         </select>
         <button onclick="adminLoadOrders()" class="bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium hover:bg-blue-800 transition"><i class="fa-solid fa-rotate-right mr-1"></i>Refresh</button>
       </div>
     </div>
+    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden"><div id="admin-orders-table"></div></div>
 
-    <!-- Orders table -->
-    <div class="bg-white rounded-2xl border border-gray-100 shadow-sm overflow-hidden">
-      <div id="admin-orders-table"></div>
-    </div>
-
-    <!-- Referrals toggle -->
-    <div class="mt-6">
-      <button onclick="toggleReferralsPanel()" class="flex items-center gap-2 text-sm font-semibold text-blue-700 border border-blue-200 px-4 py-2 rounded-xl hover:bg-blue-50 transition">
-        <i class="fa-solid fa-user-group"></i> View Referrals
-      </button>
-    </div>
-
-    <!-- Files management toggle -->
-    <div class="mt-4">
-      <button onclick="toggleFilesPanel()" class="flex items-center gap-2 text-sm font-semibold text-violet-700 border border-violet-200 px-4 py-2 rounded-xl hover:bg-violet-50 transition">
-        <i class="fa-solid fa-folder-open"></i> Manage Uploaded Files
-      </button>
+    <div class="mt-6 flex flex-wrap gap-3">
+      <button onclick="toggleReferralsPanel()" class="flex items-center gap-2 text-sm font-semibold text-blue-700 border border-blue-200 px-4 py-2 rounded-xl hover:bg-blue-50 transition"><i class="fa-solid fa-user-group"></i> View Referrals</button>
+      <button onclick="toggleFilesPanel()" class="flex items-center gap-2 text-sm font-semibold text-violet-700 border border-violet-200 px-4 py-2 rounded-xl hover:bg-violet-50 transition"><i class="fa-solid fa-folder-open"></i> Manage Uploaded Files</button>
     </div>
 
     <!-- Files panel -->
@@ -533,12 +383,8 @@
       <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
         <h3 class="font-bold text-gray-800 text-lg"><i class="fa-solid fa-folder-open text-violet-600 mr-2"></i>Uploaded Files</h3>
         <div class="flex gap-2">
-          <input id="files-email-filter" type="text" placeholder="Filter by email…"
-            class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-44"
-            oninput="debounceFilesLoad()" />
-          <button onclick="adminLoadFiles()" class="bg-blue-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-800 transition" title="Refresh">
-            <i class="fa-solid fa-rotate-right"></i>
-          </button>
+          <input id="files-email-filter" type="text" placeholder="Filter by email…" class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-44" oninput="debounceFilesLoad()" />
+          <button onclick="adminLoadFiles()" class="bg-blue-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-800 transition" title="Refresh"><i class="fa-solid fa-rotate-right"></i></button>
         </div>
       </div>
       <div id="files-table"></div>
@@ -547,50 +393,29 @@
     <!-- Referrals panel -->
     <div id="referrals-panel" class="hidden mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
       <h3 class="font-bold text-gray-800 text-lg mb-5"><i class="fa-solid fa-user-group text-blue-600 mr-2"></i>Referral Agents</h3>
-
-      <!-- Add new referral agent form -->
       <div class="bg-gray-50 rounded-xl p-4 mb-6">
         <h4 class="text-sm font-semibold text-gray-700 mb-3">Add New Agent</h4>
         <div class="grid sm:grid-cols-4 gap-3">
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">Name</label>
-            <input id="ref-name" type="text" placeholder="Agent name" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
-          </div>
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">Email</label>
-            <input id="ref-email" type="email" placeholder="agent@email.com" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
-          </div>
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">Phone</label>
-            <input id="ref-phone" type="tel" placeholder="08012345678" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" />
-          </div>
-          <div>
-            <label class="block text-xs text-gray-500 mb-1">Code</label>
-            <input id="ref-code" type="text" placeholder="e.g. JD3K2" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 uppercase" style="text-transform:uppercase" />
-          </div>
+          <div><label class="block text-xs text-gray-500 mb-1">Name</label><input id="adm-ref-name" type="text" placeholder="Agent name" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" /></div>
+          <div><label class="block text-xs text-gray-500 mb-1">Email</label><input id="adm-ref-email" type="email" placeholder="agent@email.com" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" /></div>
+          <div><label class="block text-xs text-gray-500 mb-1">Phone</label><input id="adm-ref-phone" type="tel" placeholder="08012345678" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300" /></div>
+          <div><label class="block text-xs text-gray-500 mb-1">Code</label><input id="adm-ref-code" type="text" placeholder="e.g. JD3K2" class="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 uppercase" style="text-transform:uppercase" /></div>
         </div>
-        <button onclick="addReferral()" class="mt-3 bg-blue-700 hover:bg-blue-800 text-white font-semibold px-5 py-2 rounded-xl text-sm transition">
-          <i class="fa-solid fa-plus mr-1"></i> Add Agent
-        </button>
+        <button onclick="addReferral()" class="mt-3 bg-blue-700 hover:bg-blue-800 text-white font-semibold px-5 py-2 rounded-xl text-sm transition"><i class="fa-solid fa-plus mr-1"></i> Add Agent</button>
       </div>
-
-      <!-- Referral agents table -->
-      <div id="referrals-table" class="overflow-x-auto">
-        <p class="text-sm text-gray-400 text-center py-6">Click "View Referrals" to load agents.</p>
-      </div>
+      <div id="referrals-table" class="overflow-x-auto"><p class="text-sm text-gray-400 text-center py-6">Click "View Referrals" to load agents.</p></div>
     </div>
   </div>
 </div>
 
-<!-- ════════════════════  STATUS MODAL  ════════════════════ -->
+<!-- STATUS MODAL -->
 <div id="status-modal" class="fixed inset-0 bg-black/40 flex items-center justify-center z-50 hidden p-4">
   <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm p-6">
     <h3 class="font-bold text-gray-800 text-lg mb-4">Update Order Status</h3>
     <p id="modal-order-id" class="text-xs text-gray-400 font-mono mb-3"></p>
     <div id="modal-files" class="space-y-1 mb-3"></div>
     <select id="modal-status" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3">
-      <option>pending</option><option>confirmed</option><option>printing</option>
-      <option>ready</option><option>collected</option><option>cancelled</option>
+      <option>pending</option><option>confirmed</option><option>printing</option><option>ready</option><option>collected</option><option>cancelled</option>
     </select>
     <textarea id="modal-notes" rows="2" placeholder="Admin notes (optional)" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 resize-none mb-4"></textarea>
     <div class="flex gap-2">
@@ -600,20 +425,32 @@
   </div>
 </div>
 
+<!-- FILE PREVIEW MODAL -->
+<div id="preview-modal" class="hidden" onclick="if(event.target===this)closePreview()">
+  <div class="bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col" style="width:min(56rem,96vw)">
+    <div class="flex justify-between items-center px-5 py-3 border-b border-gray-100 flex-shrink-0">
+      <span id="preview-title" class="font-semibold text-gray-800 text-sm truncate max-w-xs"></span>
+      <div class="flex items-center gap-2">
+        <a id="preview-download" href="#" target="_blank" rel="noopener" class="text-xs text-blue-600 hover:text-blue-800 border border-blue-100 hover:border-blue-300 px-2.5 py-1 rounded-lg transition"><i class="fa-solid fa-arrow-down mr-1"></i>Open</a>
+        <button onclick="closePreview()" class="w-7 h-7 rounded-full bg-gray-100 hover:bg-gray-200 flex items-center justify-center text-gray-600 transition"><i class="fa-solid fa-xmark text-sm"></i></button>
+      </div>
+    </div>
+    <div id="preview-content" class="flex-1 overflow-auto p-2 min-h-0"></div>
+  </div>
+</div>
+
 <a href="https://wa.me/2347065342818?text=Hi%2C%20I%20want%20to%20place%20a%20print%20order%20on%20CampusPrint"
-   target="_blank"
-   class="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition"
-   title="Order via WhatsApp">
+   target="_blank" class="fixed bottom-6 right-6 z-50 bg-green-500 hover:bg-green-600 text-white w-14 h-14 rounded-full flex items-center justify-center shadow-xl transition" title="Order via WhatsApp">
   <i class="fa-brands fa-whatsapp text-2xl"></i>
 </a>
 
 <script>
 // ═══════════════════════ CONFIG ═══════════════════════
 const API = '/api';
-const PAYSTACK_PK = 'pk_test_your_public_key_here'; // ← replace with your real key
+const PAYSTACK_PK = window.__PAYSTACK_PK__ || 'pk_test_your_public_key_here';
 
 // ═══════════════════════ STATE ════════════════════════
-let files = [];       // { name, pages, copies, colorMode, paperSize, doubleSided, binding }
+let files = [];
 let currentOrder = null;
 let adminToken = localStorage.getItem('cp_admin_token') || '';
 let adminUser  = JSON.parse(localStorage.getItem('cp_admin_user') || 'null');
@@ -627,18 +464,18 @@ function showPage(name) {
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('bg-blue-50','text-blue-700'));
   document.getElementById('page-' + name).classList.add('active');
   document.getElementById('nav-' + name)?.classList.add('bg-blue-50','text-blue-700');
-  if (name === 'admin' && adminSecret) adminLoadOrders();
+  if (name === 'admin' && adminToken) adminLoadOrders();
 }
 
 // ═══════════════════════ TOAST ════════════════════════
 function toast(msg, type = 'info') {
   const el = document.getElementById('toast');
   const inner = document.getElementById('toast-inner');
-  const icon = document.getElementById('toast-icon');
+  const icon  = document.getElementById('toast-icon');
   document.getElementById('toast-msg').textContent = msg;
-  const map = { success: ['bg-green-600','fa-circle-check'], error: ['bg-red-600','fa-circle-xmark'], info: ['bg-blue-600','fa-circle-info'] };
+  const map = { success:['bg-green-600','fa-circle-check'], error:['bg-red-600','fa-circle-xmark'], info:['bg-blue-600','fa-circle-info'] };
   inner.className = `flex items-start gap-3 px-4 py-3 rounded-xl shadow-lg text-sm text-white font-medium ${map[type][0]}`;
-  icon.className = `mt-0.5 text-base fa-solid ${map[type][1]}`;
+  icon.className  = `mt-0.5 text-base fa-solid ${map[type][1]}`;
   el.classList.remove('hidden');
   clearTimeout(el._t);
   el._t = setTimeout(() => el.classList.add('hidden'), 3500);
@@ -649,10 +486,11 @@ let currentStep = 1;
 
 function goStep(n) {
   if (n === 2) {
-    const name = document.getElementById('st-name').value.trim();
+    const name  = document.getElementById('st-name').value.trim();
     const email = document.getElementById('st-email').value.trim();
     if (!name || !email) { toast('Name and email are required', 'error'); return; }
     if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { toast('Please enter a valid email', 'error'); return; }
+    loadHistoryShortcut(email);
   }
   if (n === 3) {
     if (!files.length) { toast('Please add at least one file', 'error'); return; }
@@ -662,8 +500,6 @@ function goStep(n) {
   }
   document.getElementById('step-' + currentStep).classList.remove('active');
   document.getElementById('step-' + n).classList.add('active');
-
-  // Dots
   for (let i = 1; i <= 4; i++) {
     const dot = document.getElementById('s' + i + '-dot');
     if (i < n) { dot.className = 'step-dot done'; dot.innerHTML = '<i class="fa-solid fa-check text-xs"></i>'; }
@@ -676,43 +512,69 @@ function goStep(n) {
   currentStep = n;
 }
 
-// ═══════════════════════ FILES ════════════════════════
-const dropZone = document.getElementById('drop-zone');
-dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classList.add('drag-over'); });
-dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
-dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFileInput(e.dataTransfer.files); });
-
-// ── file type icon helper ──
+// ═══════════════════════ FILE ICONS ════════════════════
 function fileIconClass(name) {
   const ext = (name.split('.').pop() || '').toLowerCase();
-  if (ext === 'pdf')  return 'fa-file-pdf text-red-400';
-  if (ext === 'docx' || ext === 'doc') return 'fa-file-word text-blue-500';
+  if (ext === 'pdf')                   return 'fa-file-pdf text-red-500';
+  if (ext === 'doc' || ext === 'docx') return 'fa-file-word text-blue-500';
+  if (ext === 'pptx')                  return 'fa-file-powerpoint text-orange-500';
+  if (ext === 'jpg' || ext === 'jpeg' || ext === 'png') return 'fa-file-image text-green-500';
   return 'fa-file text-gray-400';
 }
 
-// ── directly patch just the progress bar in a file card (no full re-render) ──
+function isPreviewable(name, resourceType) {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  return resourceType === 'image' || ['jpg','jpeg','png','pdf'].includes(ext);
+}
+
+// ═══════════════════════ PROGRESS PATCH ════════════════
 function patchFileProgress(entry) {
-  const idx = files.indexOf(entry);
-  if (idx < 0) return;
+  const idx  = files.indexOf(entry);
   const card = document.querySelector(`#file-list .file-card[data-index="${idx}"]`);
   if (!card) return;
   const bar = card.querySelector('.upload-progress-bar');
   const pct = card.querySelector('.upload-progress-pct');
-  const pv  = Math.round(entry.progress || 0);
-  if (bar) bar.style.width = pv + '%';
-  if (pct) pct.textContent = pv + '%';
+  const v   = Math.round(entry.progress || 0);
+  if (bar) bar.style.width = v + '%';
+  if (pct) pct.textContent = v + '%';
 }
+
+// ═══════════════════════ FILE INPUT ════════════════════
+const dropZone = document.getElementById('drop-zone');
+dropZone.addEventListener('dragover',  e  => { e.preventDefault(); dropZone.classList.add('drag-over'); });
+dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
+dropZone.addEventListener('drop',      e  => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFileInput(e.dataTransfer.files); });
 
 function handleFileInput(fileList) {
   for (const f of fileList) {
-    if (f.size > 10 * 1024 * 1024) { toast(`"${f.name}" exceeds the 10 MB limit`, 'error'); continue; }
-    const entry = { name: f.name, pages: 1, copies: 1, serviceType: 'print_bw', paperSize: 'A4',
-                    doubleSided: false, binding: 'none', url: null, uploadId: null,
-                    uploading: true, error: null, progress: 0, autoPages: false };
+    if (f.size > 50 * 1024 * 1024) { toast(`"${f.name}" exceeds the 50 MB limit`, 'error'); continue; }
+    const ext = (f.name.split('.').pop() || '').toLowerCase();
+    const ok  = ['pdf','doc','docx','pptx','jpg','jpeg','png'].includes(ext);
+    if (!ok) { toast(`"${f.name}" is not an accepted file type`, 'error'); continue; }
+    const entry = {
+      name: f.name, pages: 1, copies: 1, serviceType: 'print_bw',
+      paperSize: 'A4', doubleSided: false, binding: 'none',
+      url: null, uploadId: null, resourceType: null,
+      uploading: true, error: null, progress: 0, autoPages: false,
+    };
     files.push(entry);
     uploadFile(f, entry);
   }
   renderFileList();
+}
+
+// Re-add a file from history
+function reuseHistoryFile(name, url, pageCount, resourceType) {
+  const entry = {
+    name, pages: pageCount || 1, copies: 1, serviceType: 'print_bw',
+    paperSize: 'A4', doubleSided: false, binding: 'none',
+    url, uploadId: null, resourceType,
+    uploading: false, error: null, progress: 0, autoPages: Boolean(pageCount),
+  };
+  files.push(entry);
+  renderFileList();
+  if (pageCount) toast(`Added "${name}" (${pageCount} pages)`, 'success');
+  else toast(`Added "${name}"`, 'success');
 }
 
 function uploadFile(rawFile, entry) {
@@ -735,8 +597,9 @@ function uploadFile(rawFile, entry) {
     try {
       const data = JSON.parse(xhr.responseText);
       if (!data.success) throw new Error(data.message || 'Upload failed');
-      entry.url      = data.data.url;
-      entry.uploadId = data.data.uploadId;
+      entry.url          = data.data.url;
+      entry.uploadId     = data.data.uploadId;
+      entry.resourceType = data.data.resourceType;
       if (data.data.pageCount) {
         entry.pages     = data.data.pageCount;
         entry.autoPages = true;
@@ -753,7 +616,7 @@ function uploadFile(rawFile, entry) {
   };
 
   xhr.onerror = () => {
-    entry.error    = 'Network error — check your connection';
+    entry.error     = 'Network error — check your connection';
     entry.uploading = false;
     renderFileList();
     toast(`Upload failed: "${entry.name}"`, 'error');
@@ -767,7 +630,6 @@ function renderFileList() {
   if (!files.length) { el.innerHTML = ''; return; }
   el.innerHTML = files.map((f, i) => `
     <div class="file-card" data-index="${i}">
-      <!-- Header: icon + name + status badge + remove -->
       <div class="flex items-start justify-between gap-2 mb-2">
         <div class="flex items-center gap-2 min-w-0">
           <i class="fa-solid ${fileIconClass(f.name)} text-lg flex-shrink-0"></i>
@@ -776,38 +638,37 @@ function renderFileList() {
             ? `<span class="text-xs text-blue-500 flex-shrink-0 upload-progress-pct">${f.progress}%</span>`
             : f.error
               ? `<i class="fa-solid fa-triangle-exclamation text-red-500 text-sm flex-shrink-0" title="${f.error.replace(/"/g,'&quot;')}"></i>`
-              : `<i class="fa-solid fa-circle-check text-green-500 text-sm flex-shrink-0" title="Uploaded successfully"></i>`}
+              : `<i class="fa-solid fa-circle-check text-green-500 text-sm flex-shrink-0" title="Uploaded"></i>`}
         </div>
-        <button onclick="removeFile(${i})" class="text-gray-300 hover:text-red-500 transition flex-shrink-0" title="Remove"><i class="fa-solid fa-trash-can text-sm"></i></button>
+        <div class="flex items-center gap-1 flex-shrink-0">
+          ${f.url && isPreviewable(f.name, f.resourceType)
+            ? `<button onclick="openPreview('${f.url}','${f.name}',${f.resourceType ? `'${f.resourceType}'` : 'null'})" title="Preview" class="text-blue-400 hover:text-blue-600 transition"><i class="fa-solid fa-eye text-sm"></i></button>`
+            : ''}
+          <button onclick="removeFile(${i})" title="Remove" class="text-gray-300 hover:text-red-500 transition ml-1"><i class="fa-solid fa-trash-can text-sm"></i></button>
+        </div>
       </div>
-      <!-- Progress bar (only while uploading) -->
       ${f.uploading ? `
         <div class="w-full bg-gray-100 rounded-full h-1.5 mb-2">
           <div class="upload-progress-bar bg-blue-500 h-1.5 rounded-full transition-all duration-100" style="width:${f.progress}%"></div>
-        </div>
-      ` : ''}
-      <!-- Error message -->
+        </div>` : ''}
       ${f.error ? `<p class="text-xs text-red-500 mb-2">${f.error} — remove and re-add the file</p>` : ''}
-      <!-- Settings grid -->
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         <div class="col-span-2 sm:col-span-3">
           <label class="text-gray-500 mb-1 block">Service</label>
           <select class="w-full border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300" onchange="updateFile(${i},'serviceType',this.value)">
-            <option value="print_bw"     ${(f.serviceType||'print_bw')==='print_bw'?'selected':''}>B&W Print</option>
-            <option value="print_color"  ${(f.serviceType||'print_bw')==='print_color'?'selected':''}>Colour Print</option>
-            <option value="editing"      ${(f.serviceType||'print_bw')==='editing'?'selected':''}>Editing</option>
-            <option value="scanning"     ${(f.serviceType||'print_bw')==='scanning'?'selected':''}>Scanning</option>
-            <option value="lamination"   ${(f.serviceType||'print_bw')==='lamination'?'selected':''}>Lamination</option>
-            <option value="cv_design"    ${(f.serviceType||'print_bw')==='cv_design'?'selected':''}>CV Design</option>
-            <option value="thesis"       ${(f.serviceType||'print_bw')==='thesis'?'selected':''}>Thesis Format</option>
-            <option value="passport"     ${(f.serviceType||'print_bw')==='passport'?'selected':''}>Passport Photos</option>
-            <option value="registration" ${(f.serviceType||'print_bw')==='registration'?'selected':''}>Registration</option>
+            <option value="print_bw"     ${f.serviceType==='print_bw'    ?'selected':''}>B&W Print</option>
+            <option value="print_color"  ${f.serviceType==='print_color' ?'selected':''}>Colour Print</option>
+            <option value="editing"      ${f.serviceType==='editing'     ?'selected':''}>Editing</option>
+            <option value="scanning"     ${f.serviceType==='scanning'    ?'selected':''}>Scanning</option>
+            <option value="lamination"   ${f.serviceType==='lamination'  ?'selected':''}>Lamination</option>
+            <option value="cv_design"    ${f.serviceType==='cv_design'   ?'selected':''}>CV Design</option>
+            <option value="thesis"       ${f.serviceType==='thesis'      ?'selected':''}>Thesis Format</option>
+            <option value="passport"     ${f.serviceType==='passport'    ?'selected':''}>Passport Photos</option>
+            <option value="registration" ${f.serviceType==='registration'?'selected':''}>Registration</option>
           </select>
         </div>
         <div>
-          <label class="text-gray-500 mb-1 block">
-            Pages ${f.autoPages ? '<span class="text-green-600 font-medium">(auto)</span>' : ''}
-          </label>
+          <label class="text-gray-500 mb-1 block">Pages ${f.autoPages ? '<span class="text-green-600 font-medium">(auto)</span>' : ''}</label>
           <input type="number" min="1" value="${f.pages}" class="w-full border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300" oninput="updateFile(${i},'pages',this.value)" onchange="updateFile(${i},'pages',this.value)" />
         </div>
         <div>
@@ -842,23 +703,119 @@ function removeFile(i) {
   const entry = files[i];
   files.splice(i, 1);
   renderFileList();
-  // Best-effort server-side cleanup of the uploaded file
-  if (entry.uploadId) {
-    fetch(`${API}/upload/${entry.uploadId}`, { method: 'DELETE' }).catch(() => {});
-  }
+  if (entry.uploadId) fetch(`${API}/upload/${entry.uploadId}`, { method: 'DELETE' }).catch(() => {});
 }
 
 function updateFile(i, field, value) {
-  if (field === 'pages' || field === 'copies') {
-    files[i][field] = Math.max(1, parseInt(value) || 1);
-  } else if (field === 'doubleSided') {
-    files[i][field] = Boolean(value);
-  } else {
-    files[i][field] = value;
-  }
+  if (field === 'pages' || field === 'copies') files[i][field] = Math.max(1, parseInt(value) || 1);
+  else if (field === 'doubleSided') files[i][field] = Boolean(value);
+  else files[i][field] = value;
   estimatePrice();
 }
 
+// ═══════════════════════ HISTORY SHORTCUT ════════════════
+async function loadHistoryShortcut(email) {
+  if (!email) return;
+  try {
+    const res = await fetch(`${API}/upload/history?email=${encodeURIComponent(email)}`);
+    const data = await res.json();
+    if (!data.success || !data.data.length) return;
+    const box  = document.getElementById('history-shortcut');
+    const list = document.getElementById('history-shortcut-list');
+    const fmtSize = b => b ? (b < 1048576 ? (b/1024).toFixed(0)+'KB' : (b/1048576).toFixed(1)+'MB') : '';
+    list.innerHTML = data.data.slice(0, 5).map(r => `
+      <div class="flex items-center justify-between gap-2 bg-white rounded-lg px-3 py-2">
+        <div class="flex items-center gap-2 min-w-0">
+          <i class="fa-solid ${fileIconClass(r.original_name)} text-sm flex-shrink-0"></i>
+          <span class="text-xs text-gray-700 truncate">${r.original_name}</span>
+          <span class="text-xs text-gray-400 flex-shrink-0">${fmtSize(r.size)}</span>
+        </div>
+        <button onclick="reuseHistoryFile('${r.original_name.replace(/'/g,"\\'")}','${r.secure_url}',${r.page_count || 'null'},'${r.resource_type}')"
+          class="text-xs text-blue-600 hover:text-blue-800 font-medium flex-shrink-0 border border-blue-100 hover:border-blue-300 px-2 py-0.5 rounded-lg transition">
+          Re-add
+        </button>
+      </div>
+    `).join('');
+    box.classList.remove('hidden');
+  } catch {}
+}
+
+// ═══════════════════════ UPLOAD HISTORY PAGE ════════════
+async function loadHistory() {
+  const email = document.getElementById('history-email-input').value.trim();
+  if (!email) { toast('Enter your email to load history', 'error'); return; }
+  const el = document.getElementById('history-result');
+  el.innerHTML = '<div class="text-center py-8"><div class="spinner mx-auto" style="border-color:#1d4ed8;border-top-color:transparent;width:2rem;height:2rem;border-width:3px;"></div></div>';
+  try {
+    const res = await fetch(`${API}/upload/history?email=${encodeURIComponent(email)}`);
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    const records = data.data;
+    if (!records.length) {
+      el.innerHTML = '<p class="text-center py-8 text-sm text-gray-400">No upload history found for this email.</p>';
+      return;
+    }
+    const fmtSize = b => b ? (b < 1048576 ? (b/1024).toFixed(0)+' KB' : (b/1048576).toFixed(1)+' MB') : '—';
+    el.innerHTML = `
+      <div class="space-y-2">
+        ${records.map(r => `
+          <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-xl border border-gray-100">
+            <i class="fa-solid ${fileIconClass(r.original_name)} text-xl flex-shrink-0"></i>
+            <div class="flex-1 min-w-0">
+              <p class="text-sm font-medium text-gray-800 truncate">${r.original_name}</p>
+              <p class="text-xs text-gray-400">${fmtSize(r.size)} ${r.page_count ? '· ' + r.page_count + ' pages' : ''} · ${new Date(r.created_at).toLocaleDateString('en-GB')}</p>
+            </div>
+            <div class="flex gap-1.5 flex-shrink-0">
+              ${isPreviewable(r.original_name, r.resource_type) ? `
+                <button onclick="openPreview('${r.secure_url}','${r.original_name}','${r.resource_type}')"
+                  class="text-xs px-2.5 py-1 border border-blue-100 hover:border-blue-300 text-blue-600 rounded-lg transition">
+                  <i class="fa-solid fa-eye"></i>
+                </button>` : ''}
+              <button onclick="reuseHistoryFile('${r.original_name.replace(/'/g,"\\'")}','${r.secure_url}',${r.page_count||'null'},'${r.resource_type}')"
+                class="text-xs px-2.5 py-1 border border-green-100 hover:border-green-300 text-green-700 rounded-lg transition">
+                <i class="fa-solid fa-plus mr-1"></i>Add to Order
+              </button>
+            </div>
+          </div>
+        `).join('')}
+      </div>
+      <p class="text-xs text-gray-400 text-center mt-4">Showing your ${records.length} most recent uploads.</p>
+    `;
+  } catch (err) {
+    el.innerHTML = `<p class="text-red-500 text-sm text-center py-6"><i class="fa-solid fa-circle-xmark mr-1"></i>${err.message}</p>`;
+  }
+}
+
+// ═══════════════════════ FILE PREVIEW ════════════════════
+function openPreview(url, name, resourceType) {
+  document.getElementById('preview-title').textContent = name;
+  document.getElementById('preview-download').href = url;
+  const content = document.getElementById('preview-content');
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  if (resourceType === 'image' || ['jpg','jpeg','png'].includes(ext)) {
+    content.innerHTML = `<img src="${url}" alt="${name}" class="max-w-full mx-auto rounded-lg" style="max-height:80vh;object-fit:contain" />`;
+  } else if (ext === 'pdf' && resourceType === 'image') {
+    content.innerHTML = `<img src="${url}" alt="PDF preview — page 1" class="max-w-full mx-auto rounded-lg" style="max-height:80vh;object-fit:contain" />`;
+  } else {
+    content.innerHTML = `
+      <div class="text-center py-12 text-gray-400">
+        <i class="fa-solid ${fileIconClass(name)} text-5xl mb-4"></i>
+        <p class="text-sm font-medium text-gray-600 mb-2">Preview not available for this file type</p>
+        <a href="${url}" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 text-sm font-medium">
+          <i class="fa-solid fa-arrow-up-right-from-square mr-1"></i>Open in new tab
+        </a>
+      </div>
+    `;
+  }
+  document.getElementById('preview-modal').classList.remove('hidden');
+}
+
+function closePreview() {
+  document.getElementById('preview-modal').classList.add('hidden');
+  document.getElementById('preview-content').innerHTML = '';
+}
+
+// ═══════════════════════ PRICE ESTIMATE ════════════════
 async function apiFetch(url, options = {}, timeoutMs = 15000) {
   const controller = new AbortController();
   const tid = setTimeout(() => controller.abort(), timeoutMs);
@@ -868,7 +825,7 @@ async function apiFetch(url, options = {}, timeoutMs = 15000) {
     return res;
   } catch (err) {
     clearTimeout(tid);
-    if (err.name === 'AbortError') throw new Error('Request timed out. Check your connection.');
+    if (err.name === 'AbortError') throw new Error('Request timed out.');
     throw err;
   }
 }
@@ -879,10 +836,7 @@ async function estimatePrice() {
   estimateDebounce = setTimeout(async () => {
     if (!files.length) return;
     try {
-      const r = await apiFetch(`${API}/orders/price-estimate`, {
-        method: 'POST', headers: {'Content-Type':'application/json'},
-        body: JSON.stringify({ files })
-      });
+      const r = await apiFetch(`${API}/orders/price-estimate`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({files}) });
       const d = await r.json();
       if (d.success) {
         const banner = document.getElementById('estimate-banner');
@@ -894,37 +848,21 @@ async function estimatePrice() {
 
 // ═══════════════════════ REVIEW ════════════════════════
 async function renderReview() {
-  // Sync number inputs before calculating (ensures mobile keyboard changes are captured)
   document.querySelectorAll('#file-list .file-card').forEach(card => {
     const i = parseInt(card.dataset.index);
     if (isNaN(i)) return;
     const inputs = card.querySelectorAll('input[type=number]');
-    if (inputs[0]) files[i].pages   = Math.max(1, parseInt(inputs[0].value) || 1);
-    if (inputs[1]) files[i].copies  = Math.max(1, parseInt(inputs[1].value) || 1);
+    if (inputs[0]) files[i].pages  = Math.max(1, parseInt(inputs[0].value) || 1);
+    if (inputs[1]) files[i].copies = Math.max(1, parseInt(inputs[1].value) || 1);
   });
-
-  const r = await apiFetch(`${API}/orders/price-estimate`, {
-    method: 'POST', headers: {'Content-Type':'application/json'},
-    body: JSON.stringify({ files })
-  }).then(r=>r.json()).catch(()=>null);
-
-  const total = r?.data?.totalAmount ?? '—';
-  const breakdown = r?.data?.breakdown ?? [];
-
+  const r = await apiFetch(`${API}/orders/price-estimate`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({files}) }).then(r=>r.json()).catch(()=>null);
+  const total     = r?.data?.totalAmount ?? '—';
+  const breakdown = r?.data?.breakdown   ?? [];
   document.getElementById('review-content').innerHTML = `
     <div class="space-y-3 mb-5">
-      <div class="flex justify-between text-sm">
-        <span class="text-gray-500">Name</span>
-        <span class="font-medium">${document.getElementById('st-name').value}</span>
-      </div>
-      <div class="flex justify-between text-sm">
-        <span class="text-gray-500">Email</span>
-        <span class="font-medium">${document.getElementById('st-email').value}</span>
-      </div>
-      <div class="flex justify-between text-sm">
-        <span class="text-gray-500">Pickup</span>
-        <span class="font-medium">${document.getElementById('st-pickup').value}</span>
-      </div>
+      <div class="flex justify-between text-sm"><span class="text-gray-500">Name</span><span class="font-medium">${document.getElementById('st-name').value}</span></div>
+      <div class="flex justify-between text-sm"><span class="text-gray-500">Email</span><span class="font-medium">${document.getElementById('st-email').value}</span></div>
+      <div class="flex justify-between text-sm"><span class="text-gray-500">Pickup</span><span class="font-medium">${document.getElementById('st-pickup').value}</span></div>
     </div>
     <div class="border-t border-gray-100 pt-4 mb-4 space-y-2">
       ${breakdown.map(b => `
@@ -937,40 +875,32 @@ async function renderReview() {
     <div class="flex justify-between font-bold text-base border-t border-gray-200 pt-3">
       <span>Total</span>
       <span class="text-blue-700">₦${typeof total==='number'?total.toLocaleString():total}</span>
-    </div>
-  `;
+    </div>`;
 }
 
 // ═══════════════════════ SUBMIT ORDER ═════════════════
 async function submitOrder() {
-  if (files.some(f => f.uploading)) { toast('Please wait for files to finish uploading', 'error'); return; }
-  if (files.some(f => f.error || !f.url)) { toast('Remove files that failed to upload before submitting', 'error'); return; }
-
+  if (files.some(f => f.uploading)) { toast('Please wait for uploads to finish', 'error'); return; }
+  if (files.some(f => f.error || !f.url)) { toast('Remove failed uploads before submitting', 'error'); return; }
   const btn = document.getElementById('submit-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Submitting…';
-
   const payload = {
     student: {
-      name: document.getElementById('st-name').value.trim(),
-      email: document.getElementById('st-email').value.trim(),
-      phone: document.getElementById('st-phone').value.trim(),
+      name:         document.getElementById('st-name').value.trim(),
+      email:        document.getElementById('st-email').value.trim(),
+      phone:        document.getElementById('st-phone').value.trim(),
       matricNumber: document.getElementById('st-matric').value.trim(),
     },
     files: files.map(({ name, url, pages, copies, serviceType, paperSize, doubleSided, binding }) =>
       ({ name, url, pages, copies, serviceType, paperSize, doubleSided, binding })),
-    pickupLocation: document.getElementById('st-pickup').value,
+    pickupLocation:      document.getElementById('st-pickup').value,
     specialInstructions: document.getElementById('st-notes').value.trim(),
-    referralCode: document.getElementById('st-referral').value.trim().toUpperCase() || undefined,
+    referralCode:        document.getElementById('st-referral').value.trim().toUpperCase() || undefined,
   };
-
   try {
-    const res = await apiFetch(`${API}/orders`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify(payload)
-    });
+    const res  = await apiFetch(`${API}/orders`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(payload) });
     const data = await res.json();
-
     if (!data.success) throw new Error(data.message);
     currentOrder = data.data;
     goStep(4);
@@ -987,17 +917,11 @@ async function initiatePaystack(order) {
   document.getElementById('payment-loading').classList.remove('hidden');
   document.getElementById('payment-success').classList.add('hidden');
   document.getElementById('payment-error').classList.add('hidden');
-
   try {
-    const res = await apiFetch(`${API}/payments/initialize`, {
-      method: 'POST', headers: {'Content-Type':'application/json'},
-      body: JSON.stringify({ orderId: order.orderId, email: order.student.email })
-    });
+    const res = await apiFetch(`${API}/payments/initialize`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ orderId:order.orderId, email:order.student.email }) });
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
-
     document.getElementById('payment-loading').classList.add('hidden');
-
     PaystackPop.setup({
       key: PAYSTACK_PK,
       email: order.student.email,
@@ -1008,9 +932,8 @@ async function initiatePaystack(order) {
       onCancel: () => {
         document.getElementById('payment-error-msg').textContent = 'You cancelled the payment.';
         document.getElementById('payment-error').classList.remove('hidden');
-      }
+      },
     }).openIframe();
-
   } catch (err) {
     document.getElementById('payment-loading').classList.add('hidden');
     document.getElementById('payment-error-msg').textContent = err.message || 'Could not initialise payment.';
@@ -1020,17 +943,15 @@ async function initiatePaystack(order) {
 
 async function verifyPayment(reference) {
   try {
-    const res = await apiFetch(`${API}/payments/verify/${reference}`);
+    const res  = await apiFetch(`${API}/payments/verify/${reference}`);
     const data = await res.json();
     if (data.success && data.data.status === 'success') {
       document.getElementById('success-orderId').textContent = currentOrder.orderId;
       document.getElementById('payment-success').classList.remove('hidden');
       document.getElementById('payment-error').classList.add('hidden');
-    } else {
-      throw new Error('Payment not confirmed');
-    }
+    } else throw new Error('Payment not confirmed');
   } catch {
-    document.getElementById('payment-error-msg').textContent = 'Payment made but verification failed – contact support with your reference: ' + reference;
+    document.getElementById('payment-error-msg').textContent = 'Payment made but verification failed – contact support with reference: ' + reference;
     document.getElementById('payment-error').classList.remove('hidden');
   }
 }
@@ -1041,10 +962,11 @@ function resetOrder() {
   files = []; currentOrder = null; currentStep = 1;
   ['st-name','st-email','st-phone','st-matric','st-notes','st-referral'].forEach(id => document.getElementById(id).value = '');
   document.getElementById('file-list').innerHTML = '';
+  document.getElementById('history-shortcut').classList.add('hidden');
   for (let i = 1; i <= 4; i++) {
     document.getElementById('step-' + i).classList.remove('active');
     const dot = document.getElementById('s' + i + '-dot');
-    dot.className = i===1 ? 'step-dot active' : 'step-dot inactive';
+    dot.className = i === 1 ? 'step-dot active' : 'step-dot inactive';
     dot.textContent = i;
   }
   ['line-1-2','line-2-3','line-3-4'].forEach(id => document.getElementById(id).className = 'step-line');
@@ -1061,7 +983,7 @@ async function trackOrder() {
   const el = document.getElementById('track-result');
   el.innerHTML = '<div class="text-center py-6"><div class="spinner mx-auto" style="border-color:#1d4ed8;border-top-color:transparent;width:2rem;height:2rem;border-width:3px;"></div></div>';
   try {
-    const res = await fetch(`${API}/orders/${encodeURIComponent(id)}`);
+    const res  = await fetch(`${API}/orders/${encodeURIComponent(id)}`);
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
     const o = data.data;
@@ -1075,8 +997,7 @@ async function trackOrder() {
         <div class="flex justify-between text-sm"><span class="text-gray-500">Pickup</span><span class="font-medium">${o.pickupLocation}</span></div>
         <div class="flex justify-between text-sm"><span class="text-gray-500">Placed</span><span class="font-medium">${new Date(o.createdAt).toLocaleString()}</span></div>
         ${o.adminNotes ? `<div class="bg-yellow-50 border border-yellow-100 rounded-lg p-3 text-sm text-yellow-800"><i class="fa-solid fa-note-sticky mr-1"></i>${o.adminNotes}</div>` : ''}
-      </div>
-    `;
+      </div>`;
   } catch (err) {
     el.innerHTML = `<p class="text-red-500 text-sm text-center py-4"><i class="fa-solid fa-circle-xmark mr-1"></i>${err.message || 'Order not found'}</p>`;
   }
@@ -1100,20 +1021,13 @@ async function adminLogin() {
   const password = document.getElementById('admin-password').value;
   document.getElementById('auth-error').classList.add('hidden');
   if (!username || !password) { showAuthError('Username and password required'); return; }
-
   const btn = document.getElementById('login-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Signing in…';
-
   try {
-    const res = await fetch(`${API}/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password }),
-    });
+    const res  = await fetch(`${API}/auth/login`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ username, password }) });
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
-
     adminToken = data.token;
     adminUser  = data.admin;
     localStorage.setItem('cp_admin_token', adminToken);
@@ -1151,28 +1065,24 @@ function adminHeaders() {
 
 async function adminLoadStats() {
   try {
-    const res = await fetch(`${API}/admin/stats`, { headers: adminHeaders() });
-    if (res.status === 401) { adminLogout(); toast('Session expired – please log in again', 'error'); return; }
+    const res  = await fetch(`${API}/admin/stats`, { headers: adminHeaders() });
+    if (res.status === 401) { adminLogout(); toast('Session expired', 'error'); return; }
     const data = await res.json();
-    if (!data.success) throw new Error(data.message);
+    if (!data.success) return;
     const { orders, revenue } = data.data;
     const cards = [
-      { label: 'Total Orders', value: orders.total,                     icon: 'fa-box-open',    color: 'blue'   },
-      { label: 'Pending',      value: orders.pending + orders.confirmed, icon: 'fa-clock',       color: 'amber'  },
-      { label: 'Printing',     value: orders.printing,                   icon: 'fa-print',       color: 'purple' },
-      { label: 'Revenue',      value: `₦${revenue.toLocaleString()}`,    icon: 'fa-naira-sign',  color: 'green'  },
+      { label:'Total Orders', value:orders.total,                      icon:'fa-box-open',   color:'blue'   },
+      { label:'Pending',      value:orders.pending + orders.confirmed,  icon:'fa-clock',      color:'amber'  },
+      { label:'Printing',     value:orders.printing,                    icon:'fa-print',      color:'purple' },
+      { label:'Revenue',      value:`₦${revenue.toLocaleString()}`,     icon:'fa-naira-sign', color:'green'  },
     ];
     document.getElementById('stats-row').innerHTML = cards.map(c => `
       <div class="bg-white rounded-2xl border border-gray-100 shadow-sm p-4 flex items-center gap-3">
         <div class="w-10 h-10 bg-${c.color}-100 rounded-xl flex items-center justify-center flex-shrink-0">
           <i class="fa-solid ${c.icon} text-${c.color}-600"></i>
         </div>
-        <div>
-          <p class="text-xs text-gray-500">${c.label}</p>
-          <p class="text-xl font-bold text-gray-800">${c.value}</p>
-        </div>
-      </div>
-    `).join('');
+        <div><p class="text-xs text-gray-500">${c.label}</p><p class="text-xl font-bold text-gray-800">${c.value}</p></div>
+      </div>`).join('');
   } catch {}
 }
 
@@ -1184,67 +1094,49 @@ function debounceAdminLoad() {
 async function adminLoadOrders() {
   const el = document.getElementById('admin-orders-table');
   el.innerHTML = '<div class="text-center py-10 text-gray-400"><div class="spinner mx-auto mb-3" style="border-color:#1d4ed8;border-top-color:transparent;width:2rem;height:2rem;border-width:3px;"></div><p class="text-sm">Loading orders…</p></div>';
-
   const params = new URLSearchParams();
-  const search = document.getElementById('admin-search').value.trim();
-  const status = document.getElementById('admin-status-filter').value;
-  const payment = document.getElementById('admin-payment-filter').value;
-  if (search) params.set('search', search);
-  if (status) params.set('status', status);
+  const search  = document.getElementById('admin-search')?.value.trim();
+  const status  = document.getElementById('admin-status-filter')?.value;
+  const payment = document.getElementById('admin-payment-filter')?.value;
+  if (search)  params.set('search', search);
+  if (status)  params.set('status', status);
   if (payment) params.set('paymentStatus', payment);
   params.set('limit', 100);
-
   try {
-    const res = await fetch(`${API}/admin/orders?${params}`, { headers: adminHeaders() });
-    if (res.status === 401) { adminLogout(); toast('Session expired – please log in again', 'error'); return; }
+    const res  = await fetch(`${API}/admin/orders?${params}`, { headers: adminHeaders() });
+    if (res.status === 401) { adminLogout(); toast('Session expired', 'error'); return; }
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
-
     const orders = data.data;
     adminOrdersCache = orders;
-    if (!orders.length) {
-      el.innerHTML = '<p class="text-center py-10 text-sm text-gray-400">No orders found</p>';
-      return;
-    }
-
+    if (!orders.length) { el.innerHTML = '<p class="text-center py-10 text-sm text-gray-400">No orders found</p>'; return; }
     el.innerHTML = `
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
             <tr>
-              <th class="text-left px-4 py-3">Order ID</th>
-              <th class="text-left px-4 py-3">Student</th>
-              <th class="text-left px-4 py-3">Amount</th>
-              <th class="text-left px-4 py-3">Status</th>
-              <th class="text-left px-4 py-3">Payment</th>
-              <th class="text-left px-4 py-3">Date</th>
-              <th class="px-4 py-3"></th>
+              <th class="text-left px-4 py-3">Order ID</th><th class="text-left px-4 py-3">Student</th>
+              <th class="text-left px-4 py-3">Amount</th><th class="text-left px-4 py-3">Status</th>
+              <th class="text-left px-4 py-3">Payment</th><th class="text-left px-4 py-3">Date</th><th class="px-4 py-3"></th>
             </tr>
           </thead>
           <tbody class="divide-y divide-gray-50">
             ${orders.map(o => `
               <tr class="hover:bg-gray-50 transition">
                 <td class="px-4 py-3 font-mono text-xs text-blue-700 font-semibold">${o.orderId}</td>
-                <td class="px-4 py-3">
-                  <p class="font-medium text-gray-800">${o.student.name}</p>
-                  <p class="text-xs text-gray-400">${o.student.email}</p>
-                </td>
+                <td class="px-4 py-3"><p class="font-medium text-gray-800">${o.student.name}</p><p class="text-xs text-gray-400">${o.student.email}</p></td>
                 <td class="px-4 py-3 font-semibold">₦${o.pricing.totalAmount.toLocaleString()}</td>
                 <td class="px-4 py-3"><span class="badge badge-${o.status}">${o.status}</span></td>
                 <td class="px-4 py-3"><span class="badge badge-${o.payment.status}">${o.payment.status}</span></td>
                 <td class="px-4 py-3 text-xs text-gray-400">${new Date(o.createdAt).toLocaleDateString()}</td>
                 <td class="px-4 py-3">
-                  <button onclick="openModal('${o.orderId}','${o.status}')" class="text-xs text-blue-600 hover:text-blue-800 font-medium border border-blue-100 hover:border-blue-300 px-2.5 py-1 rounded-lg transition">
-                    Update
-                  </button>
+                  <button onclick="openModal('${o.orderId}','${o.status}')" class="text-xs text-blue-600 hover:text-blue-800 font-medium border border-blue-100 hover:border-blue-300 px-2.5 py-1 rounded-lg transition">Update</button>
                 </td>
-              </tr>
-            `).join('')}
+              </tr>`).join('')}
           </tbody>
         </table>
         <p class="text-xs text-gray-400 text-right px-4 py-3">${data.total} total orders</p>
-      </div>
-    `;
+      </div>`;
   } catch (err) {
     el.innerHTML = `<p class="text-center py-10 text-sm text-red-500">${err.message}</p>`;
   }
@@ -1255,32 +1147,25 @@ function openModal(orderId, currentStatus) {
   modalOrderId = orderId;
   document.getElementById('modal-order-id').textContent = orderId;
   document.getElementById('modal-status').value = currentStatus;
-  document.getElementById('modal-notes').value = '';
-
+  document.getElementById('modal-notes').value  = '';
   const order = adminOrdersCache.find(o => o.orderId === orderId);
-  const origin = API.replace(/\/api$/, '');
   document.getElementById('modal-files').innerHTML = (order?.files || []).map(f => `
-    <a href="${f.url ? origin + f.url : '#'}" target="_blank" rel="noopener"
+    <a href="${f.url || '#'}" target="_blank" rel="noopener"
        class="flex items-center gap-2 text-xs ${f.url ? 'text-blue-600 hover:text-blue-800' : 'text-gray-400'} truncate">
       <i class="fa-solid fa-${f.url ? 'file-arrow-down' : 'triangle-exclamation'}"></i>
       <span class="truncate">${f.name}${f.url ? '' : ' (not uploaded)'}</span>
-    </a>
-  `).join('') || '<p class="text-xs text-gray-400">No files</p>';
-
+    </a>`).join('') || '<p class="text-xs text-gray-400">No files</p>';
   document.getElementById('status-modal').classList.remove('hidden');
 }
 
 function closeModal() { document.getElementById('status-modal').classList.add('hidden'); }
+document.getElementById('status-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
 
 async function saveStatus() {
-  const status = document.getElementById('modal-status').value;
+  const status     = document.getElementById('modal-status').value;
   const adminNotes = document.getElementById('modal-notes').value.trim();
   try {
-    const res = await fetch(`${API}/admin/orders/${modalOrderId}/status`, {
-      method: 'PATCH',
-      headers: adminHeaders(),
-      body: JSON.stringify({ status, adminNotes }),
-    });
+    const res  = await fetch(`${API}/admin/orders/${modalOrderId}/status`, { method:'PATCH', headers:adminHeaders(), body:JSON.stringify({ status, adminNotes }) });
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
     toast(`Order updated to "${status}"`, 'success');
@@ -1292,8 +1177,6 @@ async function saveStatus() {
   }
 }
 
-document.getElementById('status-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
-
 // ═══════════════════════ ADMIN FILES ════════════════
 let filesPanelOpened = false;
 let filesDebounce;
@@ -1301,10 +1184,7 @@ let filesDebounce;
 function toggleFilesPanel() {
   const panel = document.getElementById('files-panel');
   const wasHidden = panel.classList.toggle('hidden');
-  if (!wasHidden && !filesPanelOpened) {
-    filesPanelOpened = true;
-    adminLoadFiles();
-  }
+  if (!wasHidden && !filesPanelOpened) { filesPanelOpened = true; adminLoadFiles(); }
 }
 
 function debounceFilesLoad() {
@@ -1315,74 +1195,47 @@ function debounceFilesLoad() {
 async function adminLoadFiles() {
   const el = document.getElementById('files-table');
   el.innerHTML = '<div class="text-center py-8 text-gray-400"><div class="spinner mx-auto mb-2" style="border-color:#7c3aed;border-top-color:transparent;width:2rem;height:2rem;border-width:3px;"></div><p class="text-sm">Loading files…</p></div>';
-
-  const email = document.getElementById('files-email-filter').value.trim();
+  const email  = document.getElementById('files-email-filter').value.trim();
   const params = new URLSearchParams({ limit: 100 });
   if (email) params.set('email', email);
-
   try {
-    const res = await fetch(`${API}/admin/files?${params}`, { headers: adminHeaders() });
+    const res  = await fetch(`${API}/admin/files?${params}`, { headers: adminHeaders() });
     if (res.status === 401) { adminLogout(); toast('Session expired', 'error'); return; }
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
-
     const records = data.data;
-    if (!records.length) {
-      el.innerHTML = '<p class="text-center py-8 text-sm text-gray-400">No files found</p>';
-      return;
-    }
-
-    const fmtSize = (bytes) => bytes < 1024 * 1024
-      ? (bytes / 1024).toFixed(0) + ' KB'
-      : (bytes / (1024 * 1024)).toFixed(1) + ' MB';
-
+    if (!records.length) { el.innerHTML = '<p class="text-center py-8 text-sm text-gray-400">No files found</p>'; return; }
+    const fmtSize = b => !b ? '—' : b < 1048576 ? (b/1024).toFixed(0)+' KB' : (b/1048576).toFixed(1)+' MB';
     el.innerHTML = `
       <div class="overflow-x-auto">
         <table class="w-full text-sm">
           <thead class="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
-            <tr>
-              <th class="text-left px-4 py-3">File</th>
-              <th class="text-left px-4 py-3">Student</th>
-              <th class="px-4 py-3 text-center">Pages</th>
-              <th class="px-4 py-3 text-center">Size</th>
-              <th class="text-left px-4 py-3">Uploaded</th>
-              <th class="px-4 py-3"></th>
-            </tr>
+            <tr><th class="text-left px-4 py-3">File</th><th class="text-left px-4 py-3">Student</th><th class="px-4 py-3 text-center">Pages</th><th class="px-4 py-3 text-center">Size</th><th class="text-left px-4 py-3">Uploaded</th><th class="px-4 py-3"></th></tr>
           </thead>
           <tbody class="divide-y divide-gray-50">
             ${records.map(r => `
               <tr class="hover:bg-gray-50 transition">
                 <td class="px-4 py-3">
                   <div class="flex items-center gap-2">
-                    <i class="fa-solid ${r.originalName.toLowerCase().endsWith('.pdf') ? 'fa-file-pdf text-red-400' : 'fa-file-word text-blue-500'} flex-shrink-0"></i>
+                    <i class="fa-solid ${fileIconClass(r.originalName)} flex-shrink-0"></i>
                     <span class="font-medium text-gray-800 truncate max-w-[160px]" title="${r.originalName}">${r.originalName}</span>
                   </div>
                 </td>
                 <td class="px-4 py-3 text-xs text-gray-500 truncate max-w-[140px]">${r.studentEmail || '—'}</td>
                 <td class="px-4 py-3 text-center text-xs">${r.pageCount ?? '—'}</td>
-                <td class="px-4 py-3 text-center text-xs">${r.size ? fmtSize(r.size) : '—'}</td>
+                <td class="px-4 py-3 text-center text-xs">${fmtSize(r.size)}</td>
                 <td class="px-4 py-3 text-xs text-gray-400">${new Date(r.createdAt).toLocaleDateString('en-GB')}</td>
                 <td class="px-4 py-3">
                   <div class="flex gap-1.5 justify-end">
-                    <button onclick="adminViewFile('${r._id}')"
-                      title="View file"
-                      class="p-1.5 text-blue-600 hover:text-blue-800 border border-blue-100 hover:border-blue-300 rounded-lg transition">
-                      <i class="fa-solid fa-eye text-xs"></i>
-                    </button>
-                    <button onclick="adminDeleteFile('${r._id}', this)"
-                      title="Delete file"
-                      class="p-1.5 text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg transition">
-                      <i class="fa-solid fa-trash-can text-xs"></i>
-                    </button>
+                    <button onclick="adminViewFile('${r._id}')" title="View file" class="p-1.5 text-blue-600 hover:text-blue-800 border border-blue-100 hover:border-blue-300 rounded-lg transition"><i class="fa-solid fa-eye text-xs"></i></button>
+                    <button onclick="adminDeleteFile('${r._id}',this)" title="Delete file" class="p-1.5 text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
                   </div>
                 </td>
-              </tr>
-            `).join('')}
+              </tr>`).join('')}
           </tbody>
         </table>
-        <p class="text-xs text-gray-400 text-right px-4 py-3">${data.total} file${data.total !== 1 ? 's' : ''} total</p>
-      </div>
-    `;
+        <p class="text-xs text-gray-400 text-right px-4 py-3">${data.total} file${data.total!==1?'s':''} total</p>
+      </div>`;
   } catch (err) {
     el.innerHTML = `<p class="text-center py-8 text-sm text-red-500">${err.message}</p>`;
   }
@@ -1390,26 +1243,28 @@ async function adminLoadFiles() {
 
 async function adminViewFile(id) {
   try {
-    const res = await fetch(`${API}/admin/files/${id}/view`, { headers: adminHeaders() });
+    const res  = await fetch(`${API}/admin/files/${id}/view`, { headers: adminHeaders() });
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
-    window.open(data.data.viewUrl, '_blank', 'noopener,noreferrer');
+    const { viewUrl, name, resourceType } = data.data;
+    if (isPreviewable(name, resourceType)) {
+      openPreview(viewUrl, name, resourceType);
+    } else {
+      window.open(viewUrl, '_blank', 'noopener,noreferrer');
+    }
   } catch (err) {
     toast(err.message || 'Could not open file', 'error');
   }
 }
 
 async function adminDeleteFile(id, btn) {
-  if (!confirm('Delete this file from storage? This cannot be undone.')) return;
+  if (!confirm('Delete this file from Cloudinary storage? This cannot be undone.')) return;
   btn.disabled = true;
   try {
-    const res = await fetch(`${API}/admin/files/${id}`, {
-      method: 'DELETE',
-      headers: adminHeaders(),
-    });
+    const res  = await fetch(`${API}/admin/files/${id}`, { method:'DELETE', headers: adminHeaders() });
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
-    toast('File deleted', 'success');
+    toast('File deleted from storage', 'success');
     adminLoadFiles();
   } catch (err) {
     toast(err.message || 'Delete failed', 'error');
@@ -1420,40 +1275,24 @@ async function adminDeleteFile(id, btn) {
 // ═══════════════════════ REFERRALS ═══════════════════
 function toggleReferralsPanel() {
   const panel = document.getElementById('referrals-panel');
-  if (panel.classList.contains('hidden')) {
-    panel.classList.remove('hidden');
-    adminLoadReferrals();
-  } else {
-    panel.classList.add('hidden');
-  }
+  if (panel.classList.contains('hidden')) { panel.classList.remove('hidden'); adminLoadReferrals(); }
+  else panel.classList.add('hidden');
 }
 
 async function adminLoadReferrals() {
   const el = document.getElementById('referrals-table');
   el.innerHTML = '<div class="text-center py-6"><div class="spinner mx-auto mb-3" style="border-color:#1d4ed8;border-top-color:transparent;width:2rem;height:2rem;border-width:3px;"></div><p class="text-sm text-gray-400">Loading referrals…</p></div>';
   try {
-    const res = await fetch(`${API}/admin/referrals`, { headers: adminHeaders() });
-    if (res.status === 401) { adminLogout(); toast('Session expired – please log in again', 'error'); return; }
+    const res  = await fetch(`${API}/admin/referrals`, { headers: adminHeaders() });
+    if (res.status === 401) { adminLogout(); toast('Session expired', 'error'); return; }
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
     const agents = data.data;
-    if (!agents.length) {
-      el.innerHTML = '<p class="text-center py-6 text-sm text-gray-400">No referral agents found.</p>';
-      return;
-    }
+    if (!agents.length) { el.innerHTML = '<p class="text-center py-6 text-sm text-gray-400">No referral agents found.</p>'; return; }
     el.innerHTML = `
       <table class="w-full text-sm">
         <thead class="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
-          <tr>
-            <th class="text-left px-4 py-3">Code</th>
-            <th class="text-left px-4 py-3">Name</th>
-            <th class="text-left px-4 py-3">Email</th>
-            <th class="text-right px-4 py-3">Pages Referred</th>
-            <th class="text-right px-4 py-3">Earnings</th>
-            <th class="text-right px-4 py-3">Paid</th>
-            <th class="text-right px-4 py-3">Pending</th>
-            <th class="px-4 py-3"></th>
-          </tr>
+          <tr><th class="text-left px-4 py-3">Code</th><th class="text-left px-4 py-3">Name</th><th class="text-left px-4 py-3">Email</th><th class="text-right px-4 py-3">Pages</th><th class="text-right px-4 py-3">Earnings</th><th class="text-right px-4 py-3">Paid</th><th class="text-right px-4 py-3">Pending</th><th class="px-4 py-3"></th></tr>
         </thead>
         <tbody class="divide-y divide-gray-50">
           ${agents.map(a => `
@@ -1461,39 +1300,31 @@ async function adminLoadReferrals() {
               <td class="px-4 py-3 font-mono text-xs font-semibold text-blue-700">${a.code}</td>
               <td class="px-4 py-3 font-medium text-gray-800">${a.name}</td>
               <td class="px-4 py-3 text-gray-500 text-xs">${a.email}</td>
-              <td class="px-4 py-3 text-right">${(a.pagesReferred || 0).toLocaleString()}</td>
-              <td class="px-4 py-3 text-right font-semibold">₦${(a.earnings || 0).toLocaleString()}</td>
-              <td class="px-4 py-3 text-right text-green-600">₦${(a.paid || 0).toLocaleString()}</td>
-              <td class="px-4 py-3 text-right text-amber-600">₦${(a.pending || 0).toLocaleString()}</td>
-              <td class="px-4 py-3">
-                ${(a.pending || 0) > 0 ? `<button onclick="payReferral('${a.code}',${a.pending})" class="text-xs text-white bg-green-600 hover:bg-green-700 font-medium px-2.5 py-1 rounded-lg transition">Pay</button>` : '<span class="text-xs text-gray-300">—</span>'}
-              </td>
-            </tr>
-          `).join('')}
+              <td class="px-4 py-3 text-right">${(a.pagesReferred||0).toLocaleString()}</td>
+              <td class="px-4 py-3 text-right font-semibold">₦${(a.earnings||0).toLocaleString()}</td>
+              <td class="px-4 py-3 text-right text-green-600">₦${(a.paid||0).toLocaleString()}</td>
+              <td class="px-4 py-3 text-right text-amber-600">₦${(a.pending||0).toLocaleString()}</td>
+              <td class="px-4 py-3">${(a.pending||0)>0?`<button onclick="payReferral('${a.code}',${a.pending})" class="text-xs text-white bg-green-600 hover:bg-green-700 font-medium px-2.5 py-1 rounded-lg transition">Pay</button>`:'<span class="text-xs text-gray-300">—</span>'}</td>
+            </tr>`).join('')}
         </tbody>
-      </table>
-    `;
+      </table>`;
   } catch (err) {
     el.innerHTML = `<p class="text-center py-6 text-sm text-red-500">${err.message}</p>`;
   }
 }
 
 async function addReferral() {
-  const name  = document.getElementById('ref-name').value.trim();
-  const email = document.getElementById('ref-email').value.trim();
-  const phone = document.getElementById('ref-phone').value.trim();
-  const code  = document.getElementById('ref-code').value.trim().toUpperCase();
+  const name  = document.getElementById('adm-ref-name').value.trim();
+  const email = document.getElementById('adm-ref-email').value.trim();
+  const phone = document.getElementById('adm-ref-phone').value.trim();
+  const code  = document.getElementById('adm-ref-code').value.trim().toUpperCase();
   if (!name || !email || !code) { toast('Name, email and code are required', 'error'); return; }
   try {
-    const res = await fetch(`${API}/admin/referrals`, {
-      method: 'POST',
-      headers: adminHeaders(),
-      body: JSON.stringify({ name, email, phone, code }),
-    });
+    const res  = await fetch(`${API}/admin/referrals`, { method:'POST', headers:adminHeaders(), body:JSON.stringify({ name, email, phone, code }) });
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
     toast('Referral agent added', 'success');
-    ['ref-name','ref-email','ref-phone','ref-code'].forEach(id => document.getElementById(id).value = '');
+    ['adm-ref-name','adm-ref-email','adm-ref-phone','adm-ref-code'].forEach(id => document.getElementById(id).value = '');
     adminLoadReferrals();
   } catch (err) {
     toast(err.message || 'Failed to add agent', 'error');
@@ -1501,13 +1332,9 @@ async function addReferral() {
 }
 
 async function payReferral(code, pending) {
-  if (!confirm(`Mark ₦${pending.toLocaleString()} as paid for agent ${code}?`)) return;
+  if (!confirm(`Mark ₦${Number(pending).toLocaleString()} as paid for agent ${code}?`)) return;
   try {
-    const res = await fetch(`${API}/admin/referrals/${encodeURIComponent(code)}/payout`, {
-      method: 'PATCH',
-      headers: adminHeaders(),
-      body: JSON.stringify({ amount: pending }),
-    });
+    const res  = await fetch(`${API}/admin/referrals/${encodeURIComponent(code)}/payout`, { method:'PATCH', headers:adminHeaders(), body:JSON.stringify({ amount: pending }) });
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
     toast(`Payout recorded for ${code}`, 'success');
@@ -1517,36 +1344,28 @@ async function payReferral(code, pending) {
   }
 }
 
-// ═══════════════════════ REFERRAL ════════════════════════
+// ═══════════════════════ PUBLIC REFERRAL ════════════════
 let newReferralCode = '';
 
 async function referralSignup() {
-  const name  = document.getElementById('ref-name').value.trim();
-  const email = document.getElementById('ref-email').value.trim();
-  const phone = document.getElementById('ref-phone').value.trim();
+  const name    = document.getElementById('ref-name').value.trim();
+  const email   = document.getElementById('ref-email').value.trim();
+  const phone   = document.getElementById('ref-phone').value.trim();
   const faculty = document.getElementById('ref-faculty').value.trim();
   const level   = document.getElementById('ref-level').value;
-
   document.getElementById('signup-error').classList.add('hidden');
   if (!name || !email || !phone) {
     document.getElementById('signup-error-msg').textContent = 'Name, email and phone are required';
     document.getElementById('signup-error').classList.remove('hidden');
     return;
   }
-
   const btn = document.getElementById('signup-btn');
   btn.disabled = true;
   btn.innerHTML = '<span class="spinner"></span> Registering…';
-
   try {
-    const res = await apiFetch(`${API}/referrals/signup`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ name, email, phone, faculty, level }),
-    });
+    const res  = await apiFetch(`${API}/referrals/signup`, { method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({ name, email, phone, faculty, level }) });
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
-
     newReferralCode = data.data.code;
     document.getElementById('new-code-display').textContent = newReferralCode;
     document.getElementById('signup-form-wrap').classList.add('hidden');
@@ -1561,8 +1380,7 @@ async function referralSignup() {
 }
 
 function copyCode() {
-  const base = window.location.origin;
-  const link = `${base}/?ref=${newReferralCode}`;
+  const link = `${window.location.origin}/?ref=${newReferralCode}`;
   navigator.clipboard.writeText(link).then(() => toast('Referral link copied!', 'success'));
 }
 
@@ -1572,40 +1390,20 @@ async function checkEarnings() {
   const el = document.getElementById('earnings-result');
   el.innerHTML = '<div class="text-center py-4"><div class="spinner mx-auto" style="border-color:#1d4ed8;border-top-color:transparent;width:1.5rem;height:1.5rem;border-width:3px;"></div></div>';
   try {
-    const res = await apiFetch(`${API}/referrals/${code}`);
+    const res  = await apiFetch(`${API}/referrals/${code}`);
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
     const r = data.data;
-    const pending = r.totalEarnings - r.paidOut;
+    const pending = (r.totalEarnings || 0) - (r.paidOut || 0);
     el.innerHTML = `
       <div class="space-y-2">
-        <div class="flex justify-between text-sm py-2 border-b border-gray-50">
-          <span class="text-gray-500">Agent</span>
-          <span class="font-semibold">${r.name}</span>
-        </div>
-        <div class="flex justify-between text-sm py-2 border-b border-gray-50">
-          <span class="text-gray-500">Your Code</span>
-          <span class="font-mono font-bold text-green-700 tracking-wider">${r.code}</span>
-        </div>
-        <div class="flex justify-between text-sm py-2 border-b border-gray-50">
-          <span class="text-gray-500">Pages Referred</span>
-          <span class="font-semibold">${r.totalPagesReferred.toLocaleString()}</span>
-        </div>
-        <div class="flex justify-between text-sm py-2 border-b border-gray-50">
-          <span class="text-gray-500">Total Earned</span>
-          <span class="font-semibold text-green-700">₦${r.totalEarnings.toLocaleString()}</span>
-        </div>
-        <div class="flex justify-between text-sm py-2 border-b border-gray-50">
-          <span class="text-gray-500">Paid Out</span>
-          <span class="font-semibold">₦${r.paidOut.toLocaleString()}</span>
-        </div>
-        <div class="flex justify-between text-sm py-2 bg-green-50 rounded-lg px-2 mt-1">
-          <span class="font-semibold text-green-700">Pending Payout</span>
-          <span class="font-bold text-green-700 text-base">₦${pending.toLocaleString()}</span>
-        </div>
-        <button onclick="shareReferralLink('${r.code}')" class="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 rounded-xl transition">
-          <i class="fa-solid fa-share-nodes mr-1"></i> Share My Referral Link
-        </button>
+        <div class="flex justify-between text-sm py-2 border-b border-gray-50"><span class="text-gray-500">Agent</span><span class="font-semibold">${r.name}</span></div>
+        <div class="flex justify-between text-sm py-2 border-b border-gray-50"><span class="text-gray-500">Your Code</span><span class="font-mono font-bold text-green-700 tracking-wider">${r.code}</span></div>
+        <div class="flex justify-between text-sm py-2 border-b border-gray-50"><span class="text-gray-500">Pages Referred</span><span class="font-semibold">${(r.totalPagesReferred||0).toLocaleString()}</span></div>
+        <div class="flex justify-between text-sm py-2 border-b border-gray-50"><span class="text-gray-500">Total Earned</span><span class="font-semibold text-green-700">₦${(r.totalEarnings||0).toLocaleString()}</span></div>
+        <div class="flex justify-between text-sm py-2 border-b border-gray-50"><span class="text-gray-500">Paid Out</span><span class="font-semibold">₦${(r.paidOut||0).toLocaleString()}</span></div>
+        <div class="flex justify-between text-sm py-2 bg-green-50 rounded-lg px-2 mt-1"><span class="font-semibold text-green-700">Pending Payout</span><span class="font-bold text-green-700 text-base">₦${pending.toLocaleString()}</span></div>
+        <button onclick="shareReferralLink('${r.code}')" class="w-full mt-2 bg-green-600 hover:bg-green-700 text-white text-sm font-semibold py-2 rounded-xl transition"><i class="fa-solid fa-share-nodes mr-1"></i> Share My Referral Link</button>
       </div>`;
   } catch (err) {
     el.innerHTML = `<p class="text-red-500 text-sm text-center py-3"><i class="fa-solid fa-circle-xmark mr-1"></i>${err.message}</p>`;
@@ -1615,18 +1413,13 @@ async function checkEarnings() {
 function shareReferralLink(code) {
   const link = `${window.location.origin}/?ref=${code}`;
   if (navigator.share) {
-    navigator.share({
-      title: 'CampusPrint – Fast Campus Printing',
-      text: `Use my referral code ${code} to order prints on CampusPrint and get fast delivery on campus!`,
-      url: link,
-    });
+    navigator.share({ title:'CampusPrint', text:`Use my referral code ${code} on CampusPrint!`, url: link });
   } else {
-    navigator.clipboard.writeText(link).then(() => toast('Referral link copied to clipboard!', 'success'));
+    navigator.clipboard.writeText(link).then(() => toast('Referral link copied!', 'success'));
   }
 }
 
 // ═══════════════════════ INIT ════════════════════════
-// Auto-fill referral code from URL ?ref= param
 const urlRef = new URLSearchParams(window.location.search).get('ref');
 if (urlRef) {
   const refInput = document.getElementById('st-referral');
@@ -1634,7 +1427,6 @@ if (urlRef) {
   toast(`Referral code "${urlRef.toUpperCase()}" applied!`, 'success');
 }
 
-// Restore admin session from localStorage if token exists
 if (adminToken && adminUser) showAdminDash();
 showPage('home');
 </script>

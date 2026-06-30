@@ -2,17 +2,15 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { createRequire } from 'module';
-import { uploadBuffer, deleteStoredFile, USE_S3 } from '../services/storageService.js';
-import UploadRecord from '../models/UploadRecord.js';
+import { uploadToCloudinary, cloudinaryResourceType, deleteFromCloudinary } from '../lib/cloudinary.js';
+import { createUploadRecord, findUploadRecord, markUploadDeleted, getUploadHistory } from '../lib/queries.js';
 
-// pdf-parse is a CommonJS module — load via require so it doesn't trigger its
-// internal test-file side-effect under ESM static analysis.
 const _require = createRequire(import.meta.url);
 let pdfParse;
-try { pdfParse = _require('pdf-parse'); } catch { /* optional dep not present */ }
+try { pdfParse = _require('pdf-parse'); } catch { /* optional */ }
 
-const ALLOWED = new Set(['.pdf', '.doc', '.docx']);
-const MAX_BYTES = 10 * 1024 * 1024; // 10 MB
+const ALLOWED = new Set(['.pdf', '.doc', '.docx', '.pptx', '.jpg', '.jpeg', '.png']);
+const MAX_BYTES = 50 * 1024 * 1024; // 50 MB
 
 const upload = multer({
   storage: multer.memoryStorage(),
@@ -21,14 +19,14 @@ const upload = multer({
     const ext = path.extname(file.originalname).toLowerCase();
     ALLOWED.has(ext)
       ? cb(null, true)
-      : cb(new Error(`File type "${ext}" is not allowed. Upload PDF or Word (.doc/.docx).`));
+      : cb(new Error(`File type "${ext}" not allowed. Accepted: PDF, Word, PPTX, JPG, PNG.`));
   },
 });
 
 async function countPdfPages(buffer) {
   if (!pdfParse) return null;
   try {
-    const result = await pdfParse(buffer, { max: 0 }); // max:0 = parse all pages, no text
+    const result = await pdfParse(buffer, { max: 0 });
     return result.numpages || null;
   } catch { return null; }
 }
@@ -36,13 +34,11 @@ async function countPdfPages(buffer) {
 const router = express.Router();
 
 // POST /api/upload
-// Accepts multipart/form-data with field "file" (and optional "email").
-// Returns { uploadId, name, url, size, pageCount }.
 router.post('/', (req, res) => {
   upload.single('file')(req, res, async (err) => {
     if (err) {
       const msg = err instanceof multer.MulterError && err.code === 'LIMIT_FILE_SIZE'
-        ? 'File exceeds 10 MB limit'
+        ? 'File exceeds the 50 MB limit'
         : err.message;
       return res.status(400).json({ success: false, message: msg });
     }
@@ -52,27 +48,35 @@ router.post('/', (req, res) => {
       const { buffer, originalname, size, mimetype } = req.file;
       const ext = path.extname(originalname).toLowerCase();
 
-      const pageCount = ext === '.pdf' ? await countPdfPages(buffer) : null;
-      const { key, url } = await uploadBuffer(buffer, originalname);
+      const [cloudResult, pageCount] = await Promise.all([
+        uploadToCloudinary(buffer, originalname),
+        ext === '.pdf' ? countPdfPages(buffer) : Promise.resolve(null),
+      ]);
 
-      const record = await UploadRecord.create({
-        originalName: originalname,
-        storedKey:   key,
-        storageType: USE_S3 ? 's3' : 'disk',
-        mimeType:    mimetype,
-        size,
-        pageCount,
-        studentEmail: (req.body.email || '').toLowerCase().trim() || undefined,
+      const record = await createUploadRecord({
+        originalName:        originalname,
+        cloudinaryPublicId:  cloudResult.public_id,
+        secureUrl:           cloudResult.secure_url,
+        resourceType:        cloudResult.resource_type,
+        format:              cloudResult.format,
+        mimeType:            mimetype,
+        size:                size,
+        pageCount:           pageCount,
+        width:               cloudResult.width,
+        height:              cloudResult.height,
+        studentEmail:        (req.body.email || '').toLowerCase().trim() || null,
       });
 
       res.status(201).json({
         success: true,
         data: {
-          uploadId:  record._id,
+          uploadId:  record.id,
           name:      originalname,
-          url,
+          url:       cloudResult.secure_url,
           size,
           pageCount,
+          resourceType: cloudResult.resource_type,
+          format:    cloudResult.format,
         },
       });
     } catch (uploadErr) {
@@ -82,16 +86,14 @@ router.post('/', (req, res) => {
 });
 
 // DELETE /api/upload/:uploadId
-// Removes the file from storage and marks the record deleted.
 router.delete('/:uploadId', async (req, res) => {
   try {
-    const record = await UploadRecord.findById(req.params.uploadId);
+    const record = await findUploadRecord(req.params.uploadId);
     if (!record || record.status === 'deleted') {
       return res.status(404).json({ success: false, message: 'Upload not found' });
     }
-    await deleteStoredFile(record.storedKey);
-    record.status = 'deleted';
-    await record.save();
+    await deleteFromCloudinary(record.cloudinary_public_id, record.resource_type);
+    await markUploadDeleted(req.params.uploadId);
     res.json({ success: true, message: 'File deleted' });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
@@ -99,15 +101,11 @@ router.delete('/:uploadId', async (req, res) => {
 });
 
 // GET /api/upload/history?email=student@example.com
-// Returns the 10 most recent active uploads for that student email.
 router.get('/history', async (req, res) => {
   const { email } = req.query;
   if (!email) return res.status(400).json({ success: false, message: 'email query parameter required' });
   try {
-    const records = await UploadRecord.find({
-      studentEmail: email.toLowerCase().trim(),
-      status: 'active',
-    }).sort({ createdAt: -1 }).limit(10).select('originalName size pageCount createdAt url storedKey');
+    const records = await getUploadHistory(email);
     res.json({ success: true, data: records });
   } catch (err) {
     res.status(500).json({ success: false, message: err.message });
