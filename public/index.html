@@ -1228,6 +1228,7 @@ async function adminLoadFiles() {
                 <td class="px-4 py-3">
                   <div class="flex gap-1.5 justify-end">
                     <button onclick="adminViewFile('${r._id}')" title="View file" class="p-1.5 text-blue-600 hover:text-blue-800 border border-blue-100 hover:border-blue-300 rounded-lg transition"><i class="fa-solid fa-eye text-xs"></i></button>
+                    <button onclick="adminDownloadFile('${r._id}','${r.name.replace(/'/g,"\\'")}')" title="Download file" class="p-1.5 text-green-600 hover:text-green-800 border border-green-100 hover:border-green-300 rounded-lg transition"><i class="fa-solid fa-download text-xs"></i></button>
                     <button onclick="adminDeleteFile('${r._id}',this)" title="Delete file" class="p-1.5 text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg transition"><i class="fa-solid fa-trash-can text-xs"></i></button>
                   </div>
                 </td>
@@ -1257,8 +1258,26 @@ async function adminViewFile(id) {
   }
 }
 
+async function adminDownloadFile(id, name) {
+  try {
+    const res  = await fetch(`${API}/admin/files/${id}/view`, { headers: adminHeaders() });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    const a = document.createElement('a');
+    a.href = data.data.viewUrl;
+    a.download = name;
+    a.target = '_blank';
+    a.rel = 'noopener noreferrer';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+  } catch (err) {
+    toast(err.message || 'Download failed', 'error');
+  }
+}
+
 async function adminDeleteFile(id, btn) {
-  if (!confirm('Delete this file from Cloudinary storage? This cannot be undone.')) return;
+  if (!confirm('Delete this file from storage? This cannot be undone.')) return;
   btn.disabled = true;
   try {
     const res  = await fetch(`${API}/admin/files/${id}`, { method:'DELETE', headers: adminHeaders() });
