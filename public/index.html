@@ -521,6 +521,29 @@
       </button>
     </div>
 
+    <!-- Files management toggle -->
+    <div class="mt-4">
+      <button onclick="toggleFilesPanel()" class="flex items-center gap-2 text-sm font-semibold text-violet-700 border border-violet-200 px-4 py-2 rounded-xl hover:bg-violet-50 transition">
+        <i class="fa-solid fa-folder-open"></i> Manage Uploaded Files
+      </button>
+    </div>
+
+    <!-- Files panel -->
+    <div id="files-panel" class="hidden mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
+      <div class="flex flex-wrap items-center justify-between gap-3 mb-5">
+        <h3 class="font-bold text-gray-800 text-lg"><i class="fa-solid fa-folder-open text-violet-600 mr-2"></i>Uploaded Files</h3>
+        <div class="flex gap-2">
+          <input id="files-email-filter" type="text" placeholder="Filter by email…"
+            class="border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 w-44"
+            oninput="debounceFilesLoad()" />
+          <button onclick="adminLoadFiles()" class="bg-blue-700 text-white px-3 py-2 rounded-lg text-sm hover:bg-blue-800 transition" title="Refresh">
+            <i class="fa-solid fa-rotate-right"></i>
+          </button>
+        </div>
+      </div>
+      <div id="files-table"></div>
+    </div>
+
     <!-- Referrals panel -->
     <div id="referrals-panel" class="hidden mt-4 bg-white rounded-2xl border border-gray-100 shadow-sm p-6">
       <h3 class="font-bold text-gray-800 text-lg mb-5"><i class="fa-solid fa-user-group text-blue-600 mr-2"></i>Referral Agents</h3>
@@ -659,31 +682,84 @@ dropZone.addEventListener('dragover', e => { e.preventDefault(); dropZone.classL
 dropZone.addEventListener('dragleave', () => dropZone.classList.remove('drag-over'));
 dropZone.addEventListener('drop', e => { e.preventDefault(); dropZone.classList.remove('drag-over'); handleFileInput(e.dataTransfer.files); });
 
+// ── file type icon helper ──
+function fileIconClass(name) {
+  const ext = (name.split('.').pop() || '').toLowerCase();
+  if (ext === 'pdf')  return 'fa-file-pdf text-red-400';
+  if (ext === 'docx' || ext === 'doc') return 'fa-file-word text-blue-500';
+  return 'fa-file text-gray-400';
+}
+
+// ── directly patch just the progress bar in a file card (no full re-render) ──
+function patchFileProgress(entry) {
+  const idx = files.indexOf(entry);
+  if (idx < 0) return;
+  const card = document.querySelector(`#file-list .file-card[data-index="${idx}"]`);
+  if (!card) return;
+  const bar = card.querySelector('.upload-progress-bar');
+  const pct = card.querySelector('.upload-progress-pct');
+  const pv  = Math.round(entry.progress || 0);
+  if (bar) bar.style.width = pv + '%';
+  if (pct) pct.textContent = pv + '%';
+}
+
 function handleFileInput(fileList) {
   for (const f of fileList) {
-    if (f.size > 10 * 1024 * 1024) { toast(`${f.name} exceeds 10 MB limit`, 'error'); continue; }
-    const entry = { name: f.name, pages: 1, copies: 1, serviceType: 'print_bw', paperSize: 'A4', doubleSided: false, binding: 'none', url: null, uploading: true, error: null };
+    if (f.size > 10 * 1024 * 1024) { toast(`"${f.name}" exceeds the 10 MB limit`, 'error'); continue; }
+    const entry = { name: f.name, pages: 1, copies: 1, serviceType: 'print_bw', paperSize: 'A4',
+                    doubleSided: false, binding: 'none', url: null, uploadId: null,
+                    uploading: true, error: null, progress: 0, autoPages: false };
     files.push(entry);
     uploadFile(f, entry);
   }
   renderFileList();
 }
 
-async function uploadFile(rawFile, entry) {
-  const formData = new FormData();
-  formData.append('file', rawFile);
-  try {
-    const res = await apiFetch(`${API}/upload`, { method: 'POST', body: formData }, 60000);
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message || 'Upload failed');
-    entry.url = data.data.url;
-  } catch (err) {
-    entry.error = err.message || 'Upload failed';
-    toast(`Failed to upload ${entry.name}: ${entry.error}`, 'error');
-  } finally {
+function uploadFile(rawFile, entry) {
+  const fd = new FormData();
+  fd.append('file', rawFile);
+  const email = document.getElementById('st-email')?.value.trim();
+  if (email) fd.append('email', email);
+
+  const xhr = new XMLHttpRequest();
+  xhr.open('POST', `${API}/upload`);
+
+  xhr.upload.onprogress = (e) => {
+    if (e.lengthComputable) {
+      entry.progress = Math.round((e.loaded / e.total) * 100);
+      patchFileProgress(entry);
+    }
+  };
+
+  xhr.onload = () => {
+    try {
+      const data = JSON.parse(xhr.responseText);
+      if (!data.success) throw new Error(data.message || 'Upload failed');
+      entry.url      = data.data.url;
+      entry.uploadId = data.data.uploadId;
+      if (data.data.pageCount) {
+        entry.pages     = data.data.pageCount;
+        entry.autoPages = true;
+        toast(`Auto-detected ${data.data.pageCount} pages in "${entry.name}"`, 'info');
+      }
+    } catch (err) {
+      entry.error = err.message || 'Upload failed';
+      toast(`Upload failed: "${entry.name}"`, 'error');
+    } finally {
+      entry.uploading = false;
+      entry.progress  = 0;
+      renderFileList();
+    }
+  };
+
+  xhr.onerror = () => {
+    entry.error    = 'Network error — check your connection';
     entry.uploading = false;
     renderFileList();
-  }
+    toast(`Upload failed: "${entry.name}"`, 'error');
+  };
+
+  xhr.send(fd);
 }
 
 function renderFileList() {
@@ -691,19 +767,28 @@ function renderFileList() {
   if (!files.length) { el.innerHTML = ''; return; }
   el.innerHTML = files.map((f, i) => `
     <div class="file-card" data-index="${i}">
-      <div class="flex items-start justify-between gap-2 mb-3">
+      <!-- Header: icon + name + status badge + remove -->
+      <div class="flex items-start justify-between gap-2 mb-2">
         <div class="flex items-center gap-2 min-w-0">
-          <i class="fa-solid fa-file-pdf text-red-400 text-lg flex-shrink-0"></i>
+          <i class="fa-solid ${fileIconClass(f.name)} text-lg flex-shrink-0"></i>
           <span class="text-sm font-medium text-gray-800 truncate">${f.name}</span>
           ${f.uploading
-            ? '<span class="spinner flex-shrink-0" style="width:0.85rem;height:0.85rem;border-width:2px;"></span>'
+            ? `<span class="text-xs text-blue-500 flex-shrink-0 upload-progress-pct">${f.progress}%</span>`
             : f.error
-              ? '<i class="fa-solid fa-triangle-exclamation text-red-500 text-sm flex-shrink-0" title="' + f.error.replace(/"/g,'&quot;') + '"></i>'
-              : '<i class="fa-solid fa-circle-check text-green-500 text-sm flex-shrink-0" title="Uploaded"></i>'}
+              ? `<i class="fa-solid fa-triangle-exclamation text-red-500 text-sm flex-shrink-0" title="${f.error.replace(/"/g,'&quot;')}"></i>`
+              : `<i class="fa-solid fa-circle-check text-green-500 text-sm flex-shrink-0" title="Uploaded successfully"></i>`}
         </div>
-        <button onclick="removeFile(${i})" class="text-gray-300 hover:text-red-500 transition flex-shrink-0"><i class="fa-solid fa-trash-can text-sm"></i></button>
+        <button onclick="removeFile(${i})" class="text-gray-300 hover:text-red-500 transition flex-shrink-0" title="Remove"><i class="fa-solid fa-trash-can text-sm"></i></button>
       </div>
-      ${f.error ? `<p class="text-xs text-red-500 mb-2">${f.error} — remove and try again</p>` : ''}
+      <!-- Progress bar (only while uploading) -->
+      ${f.uploading ? `
+        <div class="w-full bg-gray-100 rounded-full h-1.5 mb-2">
+          <div class="upload-progress-bar bg-blue-500 h-1.5 rounded-full transition-all duration-100" style="width:${f.progress}%"></div>
+        </div>
+      ` : ''}
+      <!-- Error message -->
+      ${f.error ? `<p class="text-xs text-red-500 mb-2">${f.error} — remove and re-add the file</p>` : ''}
+      <!-- Settings grid -->
       <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
         <div class="col-span-2 sm:col-span-3">
           <label class="text-gray-500 mb-1 block">Service</label>
@@ -720,7 +805,9 @@ function renderFileList() {
           </select>
         </div>
         <div>
-          <label class="text-gray-500 mb-1 block">Pages</label>
+          <label class="text-gray-500 mb-1 block">
+            Pages ${f.autoPages ? '<span class="text-green-600 font-medium">(auto)</span>' : ''}
+          </label>
           <input type="number" min="1" value="${f.pages}" class="w-full border border-gray-200 rounded px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-blue-300" oninput="updateFile(${i},'pages',this.value)" onchange="updateFile(${i},'pages',this.value)" />
         </div>
         <div>
@@ -751,7 +838,15 @@ function renderFileList() {
   estimatePrice();
 }
 
-function removeFile(i) { files.splice(i, 1); renderFileList(); }
+function removeFile(i) {
+  const entry = files[i];
+  files.splice(i, 1);
+  renderFileList();
+  // Best-effort server-side cleanup of the uploaded file
+  if (entry.uploadId) {
+    fetch(`${API}/upload/${entry.uploadId}`, { method: 'DELETE' }).catch(() => {});
+  }
+}
 
 function updateFile(i, field, value) {
   if (field === 'pages' || field === 'copies') {
@@ -1198,6 +1293,129 @@ async function saveStatus() {
 }
 
 document.getElementById('status-modal').addEventListener('click', e => { if (e.target === e.currentTarget) closeModal(); });
+
+// ═══════════════════════ ADMIN FILES ════════════════
+let filesPanelOpened = false;
+let filesDebounce;
+
+function toggleFilesPanel() {
+  const panel = document.getElementById('files-panel');
+  const wasHidden = panel.classList.toggle('hidden');
+  if (!wasHidden && !filesPanelOpened) {
+    filesPanelOpened = true;
+    adminLoadFiles();
+  }
+}
+
+function debounceFilesLoad() {
+  clearTimeout(filesDebounce);
+  filesDebounce = setTimeout(adminLoadFiles, 400);
+}
+
+async function adminLoadFiles() {
+  const el = document.getElementById('files-table');
+  el.innerHTML = '<div class="text-center py-8 text-gray-400"><div class="spinner mx-auto mb-2" style="border-color:#7c3aed;border-top-color:transparent;width:2rem;height:2rem;border-width:3px;"></div><p class="text-sm">Loading files…</p></div>';
+
+  const email = document.getElementById('files-email-filter').value.trim();
+  const params = new URLSearchParams({ limit: 100 });
+  if (email) params.set('email', email);
+
+  try {
+    const res = await fetch(`${API}/admin/files?${params}`, { headers: adminHeaders() });
+    if (res.status === 401) { adminLogout(); toast('Session expired', 'error'); return; }
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+
+    const records = data.data;
+    if (!records.length) {
+      el.innerHTML = '<p class="text-center py-8 text-sm text-gray-400">No files found</p>';
+      return;
+    }
+
+    const fmtSize = (bytes) => bytes < 1024 * 1024
+      ? (bytes / 1024).toFixed(0) + ' KB'
+      : (bytes / (1024 * 1024)).toFixed(1) + ' MB';
+
+    el.innerHTML = `
+      <div class="overflow-x-auto">
+        <table class="w-full text-sm">
+          <thead class="bg-gray-50 border-b border-gray-100 text-xs uppercase tracking-wide text-gray-500">
+            <tr>
+              <th class="text-left px-4 py-3">File</th>
+              <th class="text-left px-4 py-3">Student</th>
+              <th class="px-4 py-3 text-center">Pages</th>
+              <th class="px-4 py-3 text-center">Size</th>
+              <th class="text-left px-4 py-3">Uploaded</th>
+              <th class="px-4 py-3"></th>
+            </tr>
+          </thead>
+          <tbody class="divide-y divide-gray-50">
+            ${records.map(r => `
+              <tr class="hover:bg-gray-50 transition">
+                <td class="px-4 py-3">
+                  <div class="flex items-center gap-2">
+                    <i class="fa-solid ${r.originalName.toLowerCase().endsWith('.pdf') ? 'fa-file-pdf text-red-400' : 'fa-file-word text-blue-500'} flex-shrink-0"></i>
+                    <span class="font-medium text-gray-800 truncate max-w-[160px]" title="${r.originalName}">${r.originalName}</span>
+                  </div>
+                </td>
+                <td class="px-4 py-3 text-xs text-gray-500 truncate max-w-[140px]">${r.studentEmail || '—'}</td>
+                <td class="px-4 py-3 text-center text-xs">${r.pageCount ?? '—'}</td>
+                <td class="px-4 py-3 text-center text-xs">${r.size ? fmtSize(r.size) : '—'}</td>
+                <td class="px-4 py-3 text-xs text-gray-400">${new Date(r.createdAt).toLocaleDateString('en-GB')}</td>
+                <td class="px-4 py-3">
+                  <div class="flex gap-1.5 justify-end">
+                    <button onclick="adminViewFile('${r._id}')"
+                      title="View file"
+                      class="p-1.5 text-blue-600 hover:text-blue-800 border border-blue-100 hover:border-blue-300 rounded-lg transition">
+                      <i class="fa-solid fa-eye text-xs"></i>
+                    </button>
+                    <button onclick="adminDeleteFile('${r._id}', this)"
+                      title="Delete file"
+                      class="p-1.5 text-red-400 hover:text-red-600 border border-red-100 hover:border-red-300 rounded-lg transition">
+                      <i class="fa-solid fa-trash-can text-xs"></i>
+                    </button>
+                  </div>
+                </td>
+              </tr>
+            `).join('')}
+          </tbody>
+        </table>
+        <p class="text-xs text-gray-400 text-right px-4 py-3">${data.total} file${data.total !== 1 ? 's' : ''} total</p>
+      </div>
+    `;
+  } catch (err) {
+    el.innerHTML = `<p class="text-center py-8 text-sm text-red-500">${err.message}</p>`;
+  }
+}
+
+async function adminViewFile(id) {
+  try {
+    const res = await fetch(`${API}/admin/files/${id}/view`, { headers: adminHeaders() });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    window.open(data.data.viewUrl, '_blank', 'noopener,noreferrer');
+  } catch (err) {
+    toast(err.message || 'Could not open file', 'error');
+  }
+}
+
+async function adminDeleteFile(id, btn) {
+  if (!confirm('Delete this file from storage? This cannot be undone.')) return;
+  btn.disabled = true;
+  try {
+    const res = await fetch(`${API}/admin/files/${id}`, {
+      method: 'DELETE',
+      headers: adminHeaders(),
+    });
+    const data = await res.json();
+    if (!data.success) throw new Error(data.message);
+    toast('File deleted', 'success');
+    adminLoadFiles();
+  } catch (err) {
+    toast(err.message || 'Delete failed', 'error');
+    btn.disabled = false;
+  }
+}
 
 // ═══════════════════════ REFERRALS ═══════════════════
 function toggleReferralsPanel() {

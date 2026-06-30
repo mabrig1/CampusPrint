@@ -10,6 +10,7 @@ import authRoutes from './routes/auth.js';
 import referralRoutes from './routes/referrals.js';
 import uploadRoutes from './routes/upload.js';
 import { errorHandler } from './middleware/errorHandler.js';
+import { USE_S3, getViewUrl, UPLOAD_DIR } from './services/storageService.js';
 import { fileURLToPath } from 'url';
 import path from 'path';
 import Admin from './models/Admin.js';
@@ -60,8 +61,21 @@ app.use('/api/payments', paymentRoutes);
 app.use('/api/admin', adminRoutes);
 app.use('/api/upload', uploadRoutes);
 
-// Serve uploaded documents (printable by admin staff)
-app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+// Serve uploaded documents.
+// S3: generate a 1-hour pre-signed URL and redirect — never exposes bucket credentials.
+// Disk: serve directly from the /uploads directory.
+if (USE_S3) {
+  app.get('/uploads/:key', async (req, res) => {
+    try {
+      const signedUrl = await getViewUrl(req.params.key);
+      res.redirect(302, signedUrl);
+    } catch {
+      res.status(404).send('File not found');
+    }
+  });
+} else {
+  app.use('/uploads', express.static(UPLOAD_DIR));
+}
 
 app.get('/api/health', (req, res) => {
   res.json({
@@ -92,4 +106,5 @@ app.use(errorHandler);
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => {
   console.log(`🚀 CampusPrint running on port ${PORT}`);
+  console.log(`📁 Storage: ${USE_S3 ? `S3 (${process.env.AWS_S3_BUCKET})` : 'local disk'}`);
 });

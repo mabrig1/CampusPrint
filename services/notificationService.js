@@ -1,21 +1,42 @@
 import nodemailer from 'nodemailer';
+import { createRequire } from 'module';
 
-const transporter = nodemailer.createTransport({
-  host: process.env.EMAIL_HOST,
-  port: Number(process.env.EMAIL_PORT) || 587,
-  secure: false,
-  auth: {
-    user: process.env.EMAIL_USER,
-    pass: process.env.EMAIL_PASS,
-  },
-});
+// Resend is an optional dependency — load via require so missing installs degrade gracefully.
+const _require = createRequire(import.meta.url);
+let ResendClass = null;
+try { ResendClass = _require('resend').Resend; } catch { /* resend not installed */ }
+
+const resendClient = ResendClass && process.env.RESEND_API_KEY
+  ? new ResendClass(process.env.RESEND_API_KEY)
+  : null;
+
+const FROM = process.env.EMAIL_FROM || 'CampusPrint <no-reply@campusprint.com>';
+
+// Nodemailer transporter (used only when Resend is not configured)
+const nodemailerTransport = (!resendClient && process.env.EMAIL_USER)
+  ? nodemailer.createTransport({
+      host:   process.env.EMAIL_HOST || 'smtp.gmail.com',
+      port:   Number(process.env.EMAIL_PORT) || 587,
+      secure: false,
+      auth:   { user: process.env.EMAIL_USER, pass: process.env.EMAIL_PASS },
+    })
+  : null;
 
 const send = async (to, subject, html) => {
-  if (!process.env.EMAIL_USER) return; // skip if email not configured
-  try {
-    await transporter.sendMail({ from: process.env.EMAIL_FROM, to, subject, html });
-  } catch (err) {
-    console.error('Email send error:', err.message);
+  if (resendClient) {
+    try {
+      await resendClient.emails.send({ from: FROM, to, subject, html });
+      return;
+    } catch (err) {
+      console.error('[Resend]', err.message);
+    }
+  }
+  if (nodemailerTransport) {
+    try {
+      await nodemailerTransport.sendMail({ from: FROM, to, subject, html });
+    } catch (err) {
+      console.error('[Nodemailer]', err.message);
+    }
   }
 };
 
@@ -47,7 +68,7 @@ export const notifyOrderReady = async (order) => {
 };
 
 export const notifyAdministrators = async (subject, html) => {
-  const adminEmail = process.env.EMAIL_USER;
+  const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER;
   if (!adminEmail) return;
   await send(adminEmail, `[Admin] ${subject}`, html);
 };

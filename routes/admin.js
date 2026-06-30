@@ -1,8 +1,10 @@
 import express from 'express';
 import Order from '../models/Order.js';
 import Referral from '../models/Referral.js';
+import UploadRecord from '../models/UploadRecord.js';
 import { adminAuth } from '../middleware/adminAuth.js';
 import { notifyOrderReady } from '../services/notificationService.js';
+import { getViewUrl, deleteStoredFile } from '../services/storageService.js';
 
 const router = express.Router();
 
@@ -105,6 +107,49 @@ router.delete('/orders/:orderId', async (req, res, next) => {
   } catch (err) {
     next(err);
   }
+});
+
+// ── FILE MANAGEMENT ROUTES ───────────────────────────────
+
+// GET /api/admin/files — paginated list of all upload records
+router.get('/files', async (req, res, next) => {
+  try {
+    const { email, page = 1, limit = 50 } = req.query;
+    const filter = { status: 'active' };
+    if (email) filter.studentEmail = { $regex: email.trim(), $options: 'i' };
+    const skip = (Number(page) - 1) * Number(limit);
+    const [records, total] = await Promise.all([
+      UploadRecord.find(filter).sort({ createdAt: -1 }).skip(skip).limit(Number(limit)),
+      UploadRecord.countDocuments(filter),
+    ]);
+    res.json({ success: true, data: records, total });
+  } catch (err) { next(err); }
+});
+
+// GET /api/admin/files/:id/view — generate a time-limited view URL
+router.get('/files/:id/view', async (req, res, next) => {
+  try {
+    const record = await UploadRecord.findById(req.params.id);
+    if (!record || record.status === 'deleted') {
+      return res.status(404).json({ success: false, message: 'File not found' });
+    }
+    const viewUrl = await getViewUrl(record.storedKey);
+    res.json({ success: true, data: { viewUrl, name: record.originalName } });
+  } catch (err) { next(err); }
+});
+
+// DELETE /api/admin/files/:id — remove a file from storage + mark deleted
+router.delete('/files/:id', async (req, res, next) => {
+  try {
+    const record = await UploadRecord.findById(req.params.id);
+    if (!record || record.status === 'deleted') {
+      return res.status(404).json({ success: false, message: 'File not found' });
+    }
+    await deleteStoredFile(record.storedKey);
+    record.status = 'deleted';
+    await record.save();
+    res.json({ success: true, message: 'File deleted' });
+  } catch (err) { next(err); }
 });
 
 // ── REFERRAL ROUTES ──────────────────────────────────────
