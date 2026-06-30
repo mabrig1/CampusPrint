@@ -82,8 +82,8 @@ const startServer = async () => {
   console.log('✅ Supabase connected');
   await seedAdmin();
 
-  const cloudName = process.env.CLOUDINARY_CLOUD_NAME;
-  console.log(`☁️  Cloudinary: ${cloudName || '⚠️  not configured (set CLOUDINARY_* env vars)'}`);
+  const ucPk = process.env.UPLOADCARE_PUBLIC_KEY;
+  console.log(`☁️  Uploadcare: ${ucPk || '⚠️  not configured (set UPLOADCARE_PUBLIC_KEY / UPLOADCARE_SECRET_KEY)'}`);
 
   const PORT = process.env.PORT || 5000;
   app.listen(PORT, () => console.log(`🚀 CampusPrint running on port ${PORT}`));

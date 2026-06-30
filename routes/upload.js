@@ -49,7 +49,7 @@ router.post('/', (req, res) => {
       const ext = path.extname(originalname).toLowerCase();
 
       const [cloudResult, pageCount] = await Promise.all([
-        uploadToCloudinary(buffer, originalname),
+        uploadToCloudinary(buffer, originalname, mimetype),
         ext === '.pdf' ? countPdfPages(buffer) : Promise.resolve(null),
       ]);
 
