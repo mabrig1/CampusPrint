@@ -80,7 +80,8 @@ router.post('/', (req, res) => {
         },
       });
     } catch (uploadErr) {
-      res.status(500).json({ success: false, message: uploadErr.message });
+      console.error('Upload failed:', uploadErr);
+      res.status(500).json({ success: false, message: uploadErr.message || 'Upload failed' });
     }
   });
 });
