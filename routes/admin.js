@@ -1,6 +1,7 @@
 import express from 'express';
+import { Readable } from 'stream';
 import {
-  listOrders, updateOrderStatus, getOrderStats,
+  listOrders, findOrder, updateOrderStatus, getOrderStats,
   listUploadRecords, findUploadRecord, markUploadDeleted,
   listReferrals, createReferral, payoutReferral,
 } from '../lib/queries.js';
@@ -67,6 +68,45 @@ router.get('/files/:id/view', async (req, res, next) => {
       return res.status(404).json({ success: false, message: 'File not found' });
     }
     res.json({ success: true, data: { viewUrl: record.secure_url, name: record.original_name, resourceType: record.resource_type, format: record.format } });
+  } catch (err) { next(err); }
+});
+
+// Stream a stored file back to the admin with its original filename.
+// A plain <a download> pointing at the Uploadcare CDN can't be used: the
+// download attribute is ignored cross-origin, so the browser opens the file
+// in a tab or saves it under its bare UUID with no extension.
+async function streamFile(res, url, name, mimeType) {
+  const upstream = await fetch(url);
+  if (!upstream.ok || !upstream.body) {
+    return res.status(502).json({ success: false, message: `Could not retrieve file from storage (HTTP ${upstream.status})` });
+  }
+  const safeName = (name || 'file').replace(/[^\w.\- ()]+/g, '_');
+  res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);
+  res.setHeader('Content-Type', mimeType || upstream.headers.get('content-type') || 'application/octet-stream');
+  const length = upstream.headers.get('content-length');
+  if (length) res.setHeader('Content-Length', length);
+  Readable.fromWeb(upstream.body).pipe(res);
+}
+
+router.get('/files/:id/download', async (req, res, next) => {
+  try {
+    const record = await findUploadRecord(req.params.id);
+    if (!record || record.status === 'deleted') {
+      return res.status(404).json({ success: false, message: 'File not found' });
+    }
+    await streamFile(res, record.secure_url, record.original_name, record.mime_type);
+  } catch (err) { next(err); }
+});
+
+router.get('/orders/:orderId/files/:fileIndex/download', async (req, res, next) => {
+  try {
+    const order = await findOrder(req.params.orderId);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    const index = Number(req.params.fileIndex);
+    const file = Number.isInteger(index) ? (order.files || [])[index] : null;
+    if (!file) return res.status(404).json({ success: false, message: 'File not found on this order' });
+    if (!file.url) return res.status(404).json({ success: false, message: 'No uploaded file is attached to this entry' });
+    await streamFile(res, file.url, file.name);
   } catch (err) { next(err); }
 });
 
