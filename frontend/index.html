@@ -793,10 +793,10 @@ function openPreview(url, name, resourceType) {
   document.getElementById('preview-download').href = url;
   const content = document.getElementById('preview-content');
   const ext = (name.split('.').pop() || '').toLowerCase();
-  if (resourceType === 'image' || ['jpg','jpeg','png'].includes(ext)) {
+  if (ext === 'pdf') {
+    content.innerHTML = `<iframe src="${url}" title="${name}" class="w-full rounded-lg" style="height:80vh;border:0"></iframe>`;
+  } else if (resourceType === 'image' || ['jpg','jpeg','png'].includes(ext)) {
     content.innerHTML = `<img src="${url}" alt="${name}" class="max-w-full mx-auto rounded-lg" style="max-height:80vh;object-fit:contain" />`;
-  } else if (ext === 'pdf' && resourceType === 'image') {
-    content.innerHTML = `<img src="${url}" alt="PDF preview — page 1" class="max-w-full mx-auto rounded-lg" style="max-height:80vh;object-fit:contain" />`;
   } else {
     content.innerHTML = `
       <div class="text-center py-12 text-gray-400">
@@ -893,8 +893,8 @@ async function submitOrder() {
       phone:        document.getElementById('st-phone').value.trim(),
       matricNumber: document.getElementById('st-matric').value.trim(),
     },
-    files: files.map(({ name, url, pages, copies, serviceType, paperSize, doubleSided, binding }) =>
-      ({ name, url, pages, copies, serviceType, paperSize, doubleSided, binding })),
+    files: files.map(({ name, url, uploadId, pages, copies, serviceType, paperSize, doubleSided, binding }) =>
+      ({ name, url, uploadId, pages, copies, serviceType, paperSize, doubleSided, binding })),
     pickupLocation:      document.getElementById('st-pickup').value,
     specialInstructions: document.getElementById('st-notes').value.trim(),
     referralCode:        document.getElementById('st-referral').value.trim().toUpperCase() || undefined,
@@ -1150,12 +1150,14 @@ function openModal(orderId, currentStatus) {
   document.getElementById('modal-status').value = currentStatus;
   document.getElementById('modal-notes').value  = '';
   const order = adminOrdersCache.find(o => o.orderId === orderId);
-  document.getElementById('modal-files').innerHTML = (order?.files || []).map(f => `
-    <a href="${f.url || '#'}" target="_blank" rel="noopener"
-       class="flex items-center gap-2 text-xs ${f.url ? 'text-blue-600 hover:text-blue-800' : 'text-gray-400'} truncate">
-      <i class="fa-solid fa-${f.url ? 'file-arrow-down' : 'triangle-exclamation'}"></i>
-      <span class="truncate">${f.name}${f.url ? '' : ' (not uploaded)'}</span>
-    </a>`).join('') || '<p class="text-xs text-gray-400">No files</p>';
+  document.getElementById('modal-files').innerHTML = (order?.files || []).map((f, i) => `
+    <div class="flex items-center justify-between gap-2 text-xs">
+      <span class="flex items-center gap-2 min-w-0 ${f.url ? 'text-gray-700' : 'text-gray-400'}">
+        <i class="fa-solid ${f.url ? fileIconClass(f.name) : 'fa-triangle-exclamation'}"></i>
+        <span class="truncate">${f.name}${f.url ? '' : ' (not uploaded)'}</span>
+      </span>
+      ${f.url ? `<button onclick="adminDownloadOrderFile('${orderId}',${i},this)" title="Download for print" class="text-blue-600 hover:text-blue-800 flex-shrink-0"><i class="fa-solid fa-download"></i></button>` : ''}
+    </div>`).join('') || '<p class="text-xs text-gray-400">No files</p>';
   document.getElementById('status-modal').classList.remove('hidden');
 }
 
@@ -1259,21 +1261,48 @@ async function adminViewFile(id) {
   }
 }
 
+// Fetch a file through the authenticated backend and save it locally.
+// (Pointing <a download> straight at the CDN doesn't work: the download
+// attribute is ignored cross-origin, so files opened in a tab instead.)
+async function fetchAndSaveFile(url, name) {
+  const res = await fetch(url, { headers: adminHeaders() });
+  if (res.status === 401) { adminLogout(); toast('Session expired', 'error'); return; }
+  if (!res.ok) {
+    let msg = 'Download failed';
+    try { msg = (await res.json()).message || msg; } catch {}
+    throw new Error(msg);
+  }
+  const blob = await res.blob();
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = name || 'file';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+}
+
 async function adminDownloadFile(id, name) {
   try {
-    const res  = await fetch(`${API}/admin/files/${id}/view`, { headers: adminHeaders() });
-    const data = await res.json();
-    if (!data.success) throw new Error(data.message);
-    const a = document.createElement('a');
-    a.href = data.data.viewUrl;
-    a.download = name;
-    a.target = '_blank';
-    a.rel = 'noopener noreferrer';
-    document.body.appendChild(a);
-    a.click();
-    document.body.removeChild(a);
+    await fetchAndSaveFile(`${API}/admin/files/${id}/download`, name);
   } catch (err) {
     toast(err.message || 'Download failed', 'error');
+  }
+}
+
+async function adminDownloadOrderFile(orderId, fileIndex, btn) {
+  const original = btn.innerHTML;
+  btn.disabled = true;
+  btn.innerHTML = '<span class="spinner"></span>';
+  try {
+    const order = adminOrdersCache.find(o => o.orderId === orderId);
+    const name  = order?.files?.[fileIndex]?.name;
+    await fetchAndSaveFile(`${API}/admin/orders/${encodeURIComponent(orderId)}/files/${fileIndex}/download`, name);
+  } catch (err) {
+    toast(err.message || 'Download failed', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
   }
 }
 

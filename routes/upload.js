@@ -43,6 +43,9 @@ router.post('/', (req, res) => {
       return res.status(400).json({ success: false, message: msg });
     }
     if (!req.file) return res.status(400).json({ success: false, message: 'No file received' });
+    if (!process.env.UPLOADCARE_PUBLIC_KEY) {
+      return res.status(500).json({ success: false, message: 'File storage is not configured on the server (missing UPLOADCARE_PUBLIC_KEY)' });
+    }
 
     try {
       const { buffer, originalname, size, mimetype } = req.file;
