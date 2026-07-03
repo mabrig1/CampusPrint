@@ -1153,7 +1153,7 @@ function openModal(orderId, currentStatus) {
           <div class="flex items-center justify-between gap-2 text-xs">
             <span class="truncate text-gray-700">${f.name} <span class="text-gray-400">(${f.pages}p × ${f.copies}, ${f.colorMode === 'color' ? 'colour' : 'B&W'})</span></span>
             ${f.url
-              ? `<a href="${f.url}" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 font-medium flex-shrink-0"><i class="fa-solid fa-download"></i></a>`
+              ? `<a href="${API}/uploads/download?url=${encodeURIComponent(f.url)}&name=${encodeURIComponent(f.name || '')}" target="_blank" rel="noopener" class="text-blue-600 hover:text-blue-800 font-medium flex-shrink-0"><i class="fa-solid fa-download"></i></a>`
               : `<span class="text-red-400 flex-shrink-0">no file</span>`}
           </div>
         `).join('')}
