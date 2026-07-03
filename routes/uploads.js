@@ -1,87 +1,61 @@
 import express from 'express';
 import multer from 'multer';
 import { Readable } from 'stream';
-import cloudinary from '../config/cloudinary.js';
 
 const router = express.Router();
 const upload = multer({ storage: multer.memoryStorage(), limits: { fileSize: 25 * 1024 * 1024 } });
 
-function uploadToCloudinary(file) {
-  return new Promise((resolve, reject) => {
-    const stream = cloudinary.uploader.upload_stream(
-      { folder: 'campusprint/orders', resource_type: 'auto', use_filename: true },
-      (err, result) => (err ? reject(err) : resolve({ name: file.originalname, url: result.secure_url }))
-    );
-    stream.end(file.buffer);
-  });
+const UPLOADCARE_UPLOAD_URL = 'https://upload.uploadcare.com/base/';
+const UCARE_CDN_HOST = 'ucarecdn.com';
+const UCARE_PATH_RE = /^\/[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}(\/|$)/i;
+
+async function uploadToUploadcare(file) {
+  const form = new FormData();
+  form.append('UPLOADCARE_PUB_KEY', process.env.UPLOADCARE_PUBLIC_KEY);
+  // Store permanently — unstored Uploadcare files are deleted after 24h.
+  form.append('UPLOADCARE_STORE', '1');
+  form.append('file', new Blob([file.buffer], { type: file.mimetype }), file.originalname);
+
+  const res = await fetch(UPLOADCARE_UPLOAD_URL, { method: 'POST', body: form });
+  if (!res.ok) {
+    const detail = await res.text().catch(() => '');
+    throw new Error(`Uploadcare upload failed (HTTP ${res.status}): ${detail.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  if (!data.file) throw new Error('Uploadcare upload returned no file id');
+  return {
+    name: file.originalname,
+    url: `https://${UCARE_CDN_HOST}/${data.file}/${encodeURIComponent(file.originalname)}`,
+  };
 }
 
-// POST /api/uploads — upload one or more files, returns Cloudinary URLs
+// POST /api/uploads — upload one or more files, returns Uploadcare CDN URLs
 router.post('/', upload.array('files', 10), async (req, res, next) => {
   try {
     if (!req.files?.length) return res.status(400).json({ success: false, message: 'No files provided' });
-    const uploaded = await Promise.all(req.files.map(uploadToCloudinary));
+    if (!process.env.UPLOADCARE_PUBLIC_KEY) {
+      return res.status(500).json({ success: false, message: 'File storage is not configured (UPLOADCARE_PUBLIC_KEY missing)' });
+    }
+    const uploaded = await Promise.all(req.files.map(uploadToUploadcare));
     res.json({ success: true, data: uploaded });
   } catch (err) {
     next(err);
   }
 });
 
-// Extract resource_type / public_id / format from one of our own Cloudinary URLs.
-// Returns null for anything that isn't an asset in this account's cloud.
-export function parseCloudinaryUrl(url) {
-  let u;
-  try { u = new URL(url); } catch { return null; }
-  if (u.hostname !== 'res.cloudinary.com') return null;
-  const m = u.pathname.match(/^\/([^/]+)\/(image|video|raw)\/upload\/(?:v\d+\/)?(.+)$/);
-  if (!m) return null;
-  const [, cloudName, resourceType, rest] = m;
-  if (cloudName !== cloudinary.config().cloud_name) return null;
-  let publicId = rest;
-  let format = '';
-  // For image/video the extension is not part of the public_id; for raw it is.
-  if (resourceType !== 'raw') {
-    const dot = rest.lastIndexOf('.');
-    if (dot > rest.lastIndexOf('/')) {
-      publicId = rest.slice(0, dot);
-      format = rest.slice(dot + 1);
-    }
-  }
-  return { resourceType, publicId: decodeURIComponent(publicId), format };
-}
-
-// GET /api/uploads/download?url=<cloudinary secure_url>&name=<original filename>
-// Cloudinary blocks unsigned delivery of PDFs/ZIPs by default on new accounts
-// (the stored secure_url returns 401 in the browser), so we fetch the asset
-// with a signed URL server-side and stream it back as an attachment.
+// GET /api/uploads/download?url=<ucarecdn url>&name=<original filename>
+// Streams the file back with a Content-Disposition attachment header so the
+// browser downloads it with the student's original filename.
 router.get('/download', async (req, res, next) => {
   try {
     const { url, name } = req.query;
-    const parsed = parseCloudinaryUrl(url || '');
-    if (!parsed) return res.status(400).json({ success: false, message: 'Invalid or missing file URL' });
-
-    const { resourceType, publicId, format } = parsed;
-
-    // Signed delivery URL — signing bypasses the PDF/ZIP delivery restriction.
-    const signedDeliveryUrl = cloudinary.url(publicId, {
-      resource_type: resourceType,
-      type: 'upload',
-      format: format || undefined,
-      sign_url: true,
-      secure: true,
-    });
-    let upstream = await fetch(signedDeliveryUrl);
-
-    if (!upstream.ok) {
-      // Fallback: authenticated download endpoint (works regardless of delivery settings).
-      const privateUrl = cloudinary.utils.private_download_url(publicId, format, {
-        resource_type: resourceType,
-        type: 'upload',
-        expires_at: Math.floor(Date.now() / 1000) + 300,
-      });
-      upstream = await fetch(privateUrl);
+    let parsed = null;
+    try { parsed = new URL(url || ''); } catch { /* handled below */ }
+    if (!parsed || parsed.protocol !== 'https:' || parsed.hostname !== UCARE_CDN_HOST || !UCARE_PATH_RE.test(parsed.pathname)) {
+      return res.status(400).json({ success: false, message: 'Invalid or missing file URL' });
     }
 
+    const upstream = await fetch(parsed);
     if (!upstream.ok) {
       return res.status(502).json({
         success: false,
@@ -89,8 +63,8 @@ router.get('/download', async (req, res, next) => {
       });
     }
 
-    const fallbackName = publicId.split('/').pop() + (format ? `.${format}` : '');
-    const filename = String(name || fallbackName).replace(/[/\\"\r\n]/g, '_') || 'download';
+    const lastSegment = decodeURIComponent(parsed.pathname.split('/').filter(Boolean).pop() || '');
+    const filename = String(name || lastSegment).replace(/[/\\"\r\n]/g, '_') || 'download';
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"; filename*=UTF-8''${encodeURIComponent(filename)}`);
     res.setHeader('Content-Type', upstream.headers.get('content-type') || 'application/octet-stream');
     const length = upstream.headers.get('content-length');
