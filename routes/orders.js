@@ -56,12 +56,13 @@ router.post('/', async (req, res, next) => {
       await creditReferral(referral.code, totalPages, totalPages * COMMISSION_PER_PAGE);
     }
 
-    await notifyAdministrators(
+    // Fire-and-forget — a slow or failing mail provider must not block the order.
+    notifyAdministrators(
       `New Order ${order.orderId}`,
       `<p>New order from <strong>${student.name}</strong> (${student.email}).</p>
        <p>Total: ₦${pricing.totalAmount.toLocaleString()}</p>
        ${referral ? `<p>Referral: <strong>${referral.code}</strong></p>` : ''}`
-    );
+    ).catch(err => console.error('[notify]', err.message));
 
     res.status(201).json({ success: true, data: order });
   } catch (err) {
