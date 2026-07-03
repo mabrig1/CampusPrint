@@ -1,7 +1,7 @@
 import express from 'express';
 import { Readable } from 'stream';
 import {
-  listOrders, findOrder, updateOrderStatus, getOrderStats,
+  listOrders, findOrder, updateOrderStatus, getOrderStats, markOrderPaid,
   listUploadRecords, findUploadRecord, markUploadDeleted,
   listReferrals, createReferral, payoutReferral,
 } from '../lib/queries.js';
@@ -38,8 +38,36 @@ router.patch('/orders/:orderId/status', async (req, res, next) => {
     }
     const order = await updateOrderStatus(req.params.orderId, { status, adminNotes, estimatedReadyAt });
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
-    if (status === 'ready') await notifyOrderReady(order);
+    if (status === 'ready') notifyOrderReady(order).catch(err => console.error('[notify]', err.message));
     res.json({ success: true, data: order });
+  } catch (err) { next(err); }
+});
+
+// Re-check an order's payment with Paystack and mark it paid if the charge
+// succeeded. Recovers orders whose popup callback / webhook was missed.
+router.post('/orders/:orderId/verify-payment', async (req, res, next) => {
+  try {
+    const order = await findOrder(req.params.orderId);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    if (order.payment.status === 'paid') {
+      return res.json({ success: true, data: order, message: 'Order is already marked paid' });
+    }
+    const reference = order.payment.paystackReference;
+    if (!reference) {
+      return res.status(400).json({ success: false, message: 'No Paystack reference on this order — the student never reached the payment page.' });
+    }
+    const paystackRes = await fetch(`https://api.paystack.co/transaction/verify/${reference}`, {
+      headers: { Authorization: `Bearer ${process.env.PAYSTACK_SECRET_KEY}` },
+    });
+    const data = await paystackRes.json();
+    if (!data.status) {
+      return res.status(502).json({ success: false, message: data.message || 'Paystack verification failed' });
+    }
+    if (data.data.status !== 'success') {
+      return res.json({ success: false, message: `Paystack reports this transaction as "${data.data.status}" — not charged.` });
+    }
+    const updated = await markOrderPaid(order.orderId, reference);
+    res.json({ success: true, data: updated, message: 'Payment confirmed — order marked as paid.' });
   } catch (err) { next(err); }
 });
 
@@ -76,9 +104,21 @@ router.get('/files/:id/view', async (req, res, next) => {
 // download attribute is ignored cross-origin, so the browser opens the file
 // in a tab or saves it under its bare UUID with no extension.
 async function streamFile(res, url, name, mimeType) {
+  // Files from before the Uploadcare switch (30 Jun) point at the old provider
+  // or were never permanently stored — they are gone and can't be recovered.
+  const LEGACY_MSG = 'This file was uploaded before the storage fix on 30 Jun and is no longer available. Please ask the student to re-upload it.';
+  let host = '';
+  try { host = new URL(url).hostname; } catch { /* fall through to fetch error */ }
+  if (host === 'res.cloudinary.com') {
+    return res.status(410).json({ success: false, message: LEGACY_MSG });
+  }
+
   const upstream = await fetch(url);
   if (!upstream.ok || !upstream.body) {
-    return res.status(502).json({ success: false, message: `Could not retrieve file from storage (HTTP ${upstream.status})` });
+    const message = upstream.status === 404 && host === 'ucarecdn.com'
+      ? LEGACY_MSG
+      : `Could not retrieve file from storage (HTTP ${upstream.status})`;
+    return res.status(upstream.status === 404 ? 410 : 502).json({ success: false, message });
   }
   const safeName = (name || 'file').replace(/[^\w.\- ()]+/g, '_');
   res.setHeader('Content-Disposition', `attachment; filename="${safeName}"`);

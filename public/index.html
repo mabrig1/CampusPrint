@@ -414,6 +414,11 @@
     <h3 class="font-bold text-gray-800 text-lg mb-4">Update Order Status</h3>
     <p id="modal-order-id" class="text-xs text-gray-400 font-mono mb-3"></p>
     <div id="modal-files" class="space-y-1 mb-3"></div>
+    <div id="modal-payment" class="mb-3 hidden">
+      <button onclick="adminVerifyPayment(this)" class="w-full border border-amber-300 bg-amber-50 text-amber-800 py-2 rounded-xl font-medium text-sm hover:bg-amber-100 transition">
+        <i class="fa-solid fa-rotate mr-1"></i> Unpaid — re-check payment with Paystack
+      </button>
+    </div>
     <select id="modal-status" class="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm focus:outline-none focus:ring-2 focus:ring-blue-300 mb-3">
       <option>pending</option><option>confirmed</option><option>printing</option><option>ready</option><option>collected</option><option>cancelled</option>
     </select>
@@ -922,15 +927,17 @@ async function initiatePaystack(order) {
     const data = await res.json();
     if (!data.success) throw new Error(data.message);
     document.getElementById('payment-loading').classList.add('hidden');
+    // NB: inline.js v1 uses callback/onClose — onSuccess/onCancel are v2-only
+    // options and are silently ignored by v1, so verification never ran.
     PaystackPop.setup({
       key: PAYSTACK_PK,
       email: order.student.email,
       amount: Math.round(order.pricing.totalAmount * 100),
       ref: data.data.reference,
       metadata: { orderId: order.orderId, studentName: order.student.name },
-      onSuccess: (transaction) => verifyPayment(transaction.reference),
-      onCancel: () => {
-        document.getElementById('payment-error-msg').textContent = 'You cancelled the payment.';
+      callback: function (response) { verifyPayment(response.reference); },
+      onClose: function () {
+        document.getElementById('payment-error-msg').textContent = 'You closed the payment window before completing payment.';
         document.getElementById('payment-error').classList.remove('hidden');
       },
     }).openIframe();
@@ -1157,7 +1164,29 @@ function openModal(orderId, currentStatus) {
       </span>
       ${f.url ? `<button onclick="adminDownloadOrderFile('${orderId}',${i},this)" title="Download for print" class="text-blue-600 hover:text-blue-800 flex-shrink-0"><i class="fa-solid fa-download"></i></button>` : ''}
     </div>`).join('') || '<p class="text-xs text-gray-400">No files</p>';
+  document.getElementById('modal-payment').classList.toggle('hidden', order?.payment?.status === 'paid');
   document.getElementById('status-modal').classList.remove('hidden');
+}
+
+async function adminVerifyPayment(btn) {
+  btn.disabled = true;
+  const original = btn.innerHTML;
+  btn.innerHTML = '<span class="spinner"></span> Checking with Paystack…';
+  try {
+    const res  = await fetch(`${API}/admin/orders/${modalOrderId}/verify-payment`, { method:'POST', headers: adminHeaders() });
+    const data = await res.json();
+    toast(data.message || (data.success ? 'Payment confirmed' : 'Could not confirm payment'), data.success ? 'success' : 'error');
+    if (data.success) {
+      closeModal();
+      adminLoadOrders();
+      adminLoadStats();
+    }
+  } catch (err) {
+    toast(err.message || 'Verification failed', 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = original;
+  }
 }
 
 function closeModal() { document.getElementById('status-modal').classList.add('hidden'); }
@@ -1477,6 +1506,28 @@ if (urlRef) {
 
 if (adminToken && adminUser) showAdminDash();
 showPage('home');
+
+// If Paystack redirected back here after checkout (PAYSTACK_CALLBACK_URL flow),
+// the popup callback never ran — confirm the charge server-side now so the
+// order gets marked paid, then clean the query string.
+(async function handlePaystackReturn() {
+  const params = new URLSearchParams(window.location.search);
+  const payRef = params.get('reference') || params.get('trxref');
+  if (!payRef) return;
+  history.replaceState(null, '', window.location.pathname);
+  try {
+    const res  = await apiFetch(`${API}/payments/verify/${encodeURIComponent(payRef)}`);
+    const data = await res.json();
+    if (data.success && data.data.status === 'success') {
+      const orderId = data.data.metadata?.orderId;
+      toast(`Payment confirmed${orderId ? ` for ${orderId}` : ''}! You'll get an email shortly.`, 'success');
+    } else {
+      toast(`We could not confirm that payment — contact support with reference ${payRef}`, 'error');
+    }
+  } catch {
+    toast(`We could not confirm that payment — contact support with reference ${payRef}`, 'error');
+  }
+})();
 </script>
 </body>
 </html>

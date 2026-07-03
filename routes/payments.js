@@ -64,7 +64,7 @@ router.get('/verify/:reference', async (req, res, next) => {
       const order = await findOrderByPaystackRef(reference);
       if (order && order.payment.status !== 'paid') {
         const updated = await markOrderPaid(order.orderId, reference);
-        await notifyOrderConfirmed(updated);
+        notifyOrderConfirmed(updated).catch(err => console.error('[notify]', err.message));
       }
     }
 
@@ -75,25 +75,35 @@ router.get('/verify/:reference', async (req, res, next) => {
 });
 
 // POST /api/payments/webhook
+// req.body is a raw Buffer here (see server.js) — required for the HMAC check.
 router.post('/webhook', express.raw({ type: 'application/json' }), async (req, res) => {
-  const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY).update(req.body).digest('hex');
-  if (hash !== req.headers['x-paystack-signature']) return res.status(401).send('Invalid signature');
-
-  const event = JSON.parse(req.body);
-  if (event.event === 'charge.success') {
-    const order = await findOrderByPaystackRef(event.data.reference);
-    if (order && order.payment.status !== 'paid') {
-      const updated = await markOrderPaid(order.orderId, event.data.reference);
-      await notifyOrderConfirmed(updated);
-      await notifyAdministrators(
-        `Payment received – ${order.orderId}`,
-        `<p>Payment confirmed for order <strong>${order.orderId}</strong> by ${order.student.name}.</p>
-         <p>Amount: ₦${order.pricing.totalAmount.toLocaleString()}</p>`
-      );
+  try {
+    if (!Buffer.isBuffer(req.body)) {
+      console.error('[webhook] body is not a raw buffer — check body-parser order in server.js');
+      return res.status(400).send('Bad request');
     }
-  }
+    const hash = crypto.createHmac('sha512', process.env.PAYSTACK_SECRET_KEY).update(req.body).digest('hex');
+    if (hash !== req.headers['x-paystack-signature']) return res.status(401).send('Invalid signature');
 
-  res.sendStatus(200);
+    const event = JSON.parse(req.body);
+    if (event.event === 'charge.success') {
+      const order = await findOrderByPaystackRef(event.data.reference);
+      if (order && order.payment.status !== 'paid') {
+        const updated = await markOrderPaid(order.orderId, event.data.reference);
+        notifyOrderConfirmed(updated).catch(err => console.error('[notify]', err.message));
+        notifyAdministrators(
+          `Payment received – ${order.orderId}`,
+          `<p>Payment confirmed for order <strong>${order.orderId}</strong> by ${order.student.name}.</p>
+           <p>Amount: ₦${order.pricing.totalAmount.toLocaleString()}</p>`
+        ).catch(err => console.error('[notify]', err.message));
+      }
+    }
+
+    res.sendStatus(200);
+  } catch (err) {
+    console.error('[webhook]', err.message);
+    res.sendStatus(200); // ack so Paystack doesn't retry forever; error is logged
+  }
 });
 
 export default router;
