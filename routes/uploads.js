@@ -1,5 +1,6 @@
 import express from 'express';
 import multer from 'multer';
+import crypto from 'crypto';
 import { Readable } from 'stream';
 
 const router = express.Router();
@@ -43,19 +44,71 @@ router.post('/', upload.array('files', 10), async (req, res, next) => {
   }
 });
 
-// GET /api/uploads/download?url=<ucarecdn url>&name=<original filename>
+// Legacy support: orders created before the Uploadcare switch stored
+// res.cloudinary.com URLs. Cloudinary blocks unsigned PDF delivery, so if a
+// direct fetch fails and CLOUDINARY_* credentials are still set, retry via
+// Cloudinary's authenticated download endpoint (signed with node:crypto —
+// no SDK needed).
+const CLOUDINARY_PATH_RE = /^\/([^/]+)\/(image|video|raw)\/upload\/(?:v\d+\/)?(.+)$/;
+
+async function fetchLegacyCloudinary(parsedUrl) {
+  const direct = await fetch(parsedUrl);
+  if (direct.ok) return direct;
+
+  const { CLOUDINARY_API_KEY: apiKey, CLOUDINARY_API_SECRET: apiSecret } = process.env;
+  const m = parsedUrl.pathname.match(CLOUDINARY_PATH_RE);
+  if (!apiKey || !apiSecret || !m) return direct;
+
+  const [, cloudName, resourceType, rest] = m;
+  let publicId = decodeURIComponent(rest);
+  let format = '';
+  if (resourceType !== 'raw') {
+    const dot = publicId.lastIndexOf('.');
+    if (dot > publicId.lastIndexOf('/')) {
+      format = publicId.slice(dot + 1);
+      publicId = publicId.slice(0, dot);
+    }
+  }
+
+  const params = {
+    expires_at: Math.floor(Date.now() / 1000) + 300,
+    format,
+    public_id: publicId,
+    timestamp: Math.floor(Date.now() / 1000),
+    type: 'upload',
+  };
+  const toSign = Object.keys(params)
+    .filter((k) => params[k] !== '' && params[k] !== undefined)
+    .sort()
+    .map((k) => `${k}=${params[k]}`)
+    .join('&');
+  const signature = crypto.createHash('sha1').update(toSign + apiSecret).digest('hex');
+
+  const query = new URLSearchParams({
+    ...Object.fromEntries(Object.entries(params).filter(([, v]) => v !== '' && v !== undefined)),
+    signature,
+    api_key: apiKey,
+  });
+  return fetch(`https://api.cloudinary.com/v1_1/${cloudName}/${resourceType}/download?${query}`);
+}
+
+// GET /api/uploads/download?url=<stored file url>&name=<original filename>
 // Streams the file back with a Content-Disposition attachment header so the
-// browser downloads it with the student's original filename.
+// browser downloads it with the student's original filename. Accepts
+// Uploadcare CDN URLs (current) and Cloudinary URLs (older orders).
 router.get('/download', async (req, res, next) => {
   try {
     const { url, name } = req.query;
     let parsed = null;
     try { parsed = new URL(url || ''); } catch { /* handled below */ }
-    if (!parsed || parsed.protocol !== 'https:' || parsed.hostname !== UCARE_CDN_HOST || !UCARE_PATH_RE.test(parsed.pathname)) {
+
+    const isUploadcare = parsed?.protocol === 'https:' && parsed.hostname === UCARE_CDN_HOST && UCARE_PATH_RE.test(parsed.pathname);
+    const isLegacyCloudinary = parsed?.protocol === 'https:' && parsed.hostname === 'res.cloudinary.com' && CLOUDINARY_PATH_RE.test(parsed.pathname);
+    if (!isUploadcare && !isLegacyCloudinary) {
       return res.status(400).json({ success: false, message: 'Invalid or missing file URL' });
     }
 
-    const upstream = await fetch(parsed);
+    const upstream = isUploadcare ? await fetch(parsed) : await fetchLegacyCloudinary(parsed);
     if (!upstream.ok) {
       return res.status(502).json({
         success: false,
