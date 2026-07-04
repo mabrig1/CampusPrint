@@ -103,21 +103,74 @@ router.get('/files/:id/view', async (req, res, next) => {
 // A plain <a download> pointing at the Uploadcare CDN can't be used: the
 // download attribute is ignored cross-origin, so the browser opens the file
 // in a tab or saves it under its bare UUID with no extension.
+const LEGACY_MSG = 'This file is no longer available — it was uploaded before permanent storage was enabled on 30 Jun and has been deleted. Please ask the student to re-upload it.';
+
+const ucApiHeaders = () => ({
+  Accept: 'application/vnd.uploadcare-v0.7+json',
+  Authorization: `Uploadcare.Simple ${process.env.UPLOADCARE_PUBLIC_KEY}:${process.env.UPLOADCARE_SECRET_KEY}`,
+});
+
+const ucarecdnUuid = (url) => {
+  const m = String(url).match(/^https:\/\/ucarecdn\.com\/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/i);
+  return m ? m[1] : null;
+};
+
+// Ask the Uploadcare REST API about a file the CDN refused to serve.
+// If the file exists but was never marked "stored", store it now (rescues
+// uploads still inside their 24h auto-delete window) and retry the CDN.
+// Returns a successful upstream Response, or a string explaining the loss.
+async function recoverUploadcareFile(uuid) {
+  if (!process.env.UPLOADCARE_PUBLIC_KEY || !process.env.UPLOADCARE_SECRET_KEY) return null;
+  let info;
+  try {
+    const r = await fetch(`https://api.uploadcare.com/files/${uuid}/`, { headers: ucApiHeaders() });
+    if (r.status === 404) {
+      return 'Storage has no record of this file — it was never stored permanently (uploads before the 30 Jun fix auto-deleted after 24 hours). Please ask the student to re-upload it.';
+    }
+    if (!r.ok) return null;
+    info = await r.json();
+  } catch { return null; }
+
+  if (info.datetime_removed) {
+    const when = new Date(info.datetime_removed).toLocaleDateString('en-GB');
+    return `This file was deleted from storage on ${when}. Please ask the student to re-upload it.`;
+  }
+  if (!info.datetime_stored) {
+    try {
+      await fetch(`https://api.uploadcare.com/files/${uuid}/storage/`, { method: 'PUT', headers: ucApiHeaders() });
+    } catch { /* retry below decides */ }
+  }
+  try {
+    const retry = await fetch(`https://ucarecdn.com/${uuid}/`);
+    if (retry.ok && retry.body) return retry;
+  } catch { /* fall through */ }
+  return null;
+}
+
 async function streamFile(res, url, name, mimeType) {
-  // Files from before the Uploadcare switch (30 Jun) point at the old provider
-  // or were never permanently stored — they are gone and can't be recovered.
-  const LEGACY_MSG = 'This file was uploaded before the storage fix on 30 Jun and is no longer available. Please ask the student to re-upload it.';
   let host = '';
   try { host = new URL(url).hostname; } catch { /* fall through to fetch error */ }
+  // Old-provider URLs from before the Uploadcare switch — the account is gone.
   if (host === 'res.cloudinary.com') {
     return res.status(410).json({ success: false, message: LEGACY_MSG });
   }
 
-  const upstream = await fetch(url);
+  let upstream = await fetch(url);
+  if (!upstream.ok && host === 'ucarecdn.com') {
+    const uuid = ucarecdnUuid(url);
+    const recovered = uuid ? await recoverUploadcareFile(uuid) : null;
+    if (recovered && typeof recovered !== 'string') {
+      upstream = recovered;
+    } else if (typeof recovered === 'string') {
+      return res.status(410).json({ success: false, message: recovered });
+    }
+  }
   if (!upstream.ok || !upstream.body) {
-    const message = upstream.status === 404 && host === 'ucarecdn.com'
+    const message = upstream.status === 404
       ? LEGACY_MSG
-      : `Could not retrieve file from storage (HTTP ${upstream.status})`;
+      : upstream.status === 403
+        ? 'Storage refused access (HTTP 403). If "signed URLs" is enabled in your Uploadcare project settings, disable it — this app serves public CDN links.'
+        : `Could not retrieve file from storage (HTTP ${upstream.status})`;
     return res.status(upstream.status === 404 ? 410 : 502).json({ success: false, message });
   }
   const safeName = (name || 'file').replace(/[^\w.\- ()]+/g, '_');
