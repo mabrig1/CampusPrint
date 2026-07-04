@@ -1,13 +1,13 @@
 import express from 'express';
 import { Readable } from 'stream';
 import {
-  listOrders, findOrder, updateOrderStatus, getOrderStats, markOrderPaid,
+  listOrders, findOrder, updateOrderStatus, getOrderStats, markOrderPaid, updateOrderFiles,
   listUploadRecords, findUploadRecord, markUploadDeleted,
   listReferrals, createReferral, payoutReferral,
 } from '../lib/queries.js';
 import { deleteFromStorage } from '../lib/storage.js';
 import { adminAuth } from '../middleware/adminAuth.js';
-import { notifyOrderReady } from '../services/notificationService.js';
+import { notifyOrderReady, notifyResendRequest } from '../services/notificationService.js';
 
 const router = express.Router();
 router.use(adminAuth);
@@ -76,6 +76,29 @@ router.delete('/orders/:orderId', async (req, res, next) => {
     const order = await updateOrderStatus(req.params.orderId, { status: 'cancelled' });
     if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
     res.json({ success: true, message: 'Order cancelled' });
+  } catch (err) { next(err); }
+});
+
+// Flag a file for re-send and email the student a re-upload link.
+// The student replaces the file free of charge via the tracking page.
+router.post('/orders/:orderId/files/:fileIndex/request-resend', async (req, res, next) => {
+  try {
+    const order = await findOrder(req.params.orderId);
+    if (!order) return res.status(404).json({ success: false, message: 'Order not found' });
+    const index = Number(req.params.fileIndex);
+    const files = [...(order.files || [])];
+    const slot = Number.isInteger(index) ? files[index] : null;
+    if (!slot) return res.status(404).json({ success: false, message: 'File not found on this order' });
+
+    files[index] = { ...slot, needsReupload: true, resendRequestedAt: new Date().toISOString() };
+    const updated = await updateOrderFiles(order.orderId, files);
+
+    const site = (process.env.SITE_URL || 'https://www.campusprint.store').replace(/\/$/, '');
+    const link = `${site}/?track=${encodeURIComponent(order.orderId)}`;
+    notifyResendRequest(updated, slot.name || 'your file', link)
+      .catch(e => console.error('[notify]', e.message));
+
+    res.json({ success: true, data: updated, message: `Re-send requested — ${order.student.email} has been emailed a re-upload link.` });
   } catch (err) { next(err); }
 });
 
