@@ -47,20 +47,29 @@ app.get('/api/health', (_req, res) => {
   res.json({ status: 'ok', message: 'CampusPrint API is running', timestamp: new Date().toISOString() });
 });
 
-// Inject Paystack public key into index.html at request time
-app.get('/', (_req, res) => {
+// Runtime config for statically-hosted copies of the frontend (e.g. Vercel),
+// loaded via <script src="/api/config">.
+app.get('/api/config', (_req, res) => {
+  res.type('application/javascript')
+     .send(`window.__PAYSTACK_PK__=${JSON.stringify(process.env.PAYSTACK_PUBLIC_KEY || '')};`);
+});
+
+// Inject the Paystack public key into index.html at request time. The SPA
+// catch-all must inject too — serving the raw file on deep links left
+// window.__PAYSTACK_PK__ undefined and broke the payment popup there.
+const serveIndex = (_req, res) => {
   const indexPath = path.join(__dirname, 'public', 'index.html');
   let content = fs.readFileSync(indexPath, 'utf8');
   const inject = `<script>window.__PAYSTACK_PK__="${process.env.PAYSTACK_PUBLIC_KEY || ''}";</script>`;
   content = content.replace('</head>', `${inject}</head>`);
   res.send(content);
-});
+};
+app.get('/', serveIndex);
 
-// Serve frontend (must come after all /api routes)
-app.use(express.static(path.join(__dirname, 'public')));
-app.get('*', (_req, res) => {
-  res.sendFile(path.join(__dirname, 'public', 'index.html'));
-});
+// Serve static assets (must come after all /api routes); index:false so
+// index.html always goes through the key-injecting handlers above/below.
+app.use(express.static(path.join(__dirname, 'public'), { index: false }));
+app.get('*', serveIndex);
 
 app.use(errorHandler);
 

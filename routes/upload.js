@@ -2,7 +2,7 @@ import express from 'express';
 import multer from 'multer';
 import path from 'path';
 import { createRequire } from 'module';
-import { uploadToCloudinary, cloudinaryResourceType, deleteFromCloudinary } from '../lib/cloudinary.js';
+import { uploadToStorage, deleteFromStorage } from '../lib/storage.js';
 import { createUploadRecord, findUploadRecord, markUploadDeleted, getUploadHistory } from '../lib/queries.js';
 
 const _require = createRequire(import.meta.url);
@@ -52,7 +52,7 @@ router.post('/', (req, res) => {
       const ext = path.extname(originalname).toLowerCase();
 
       const [cloudResult, pageCount] = await Promise.all([
-        uploadToCloudinary(buffer, originalname, mimetype),
+        uploadToStorage(buffer, originalname, mimetype),
         ext === '.pdf' ? countPdfPages(buffer) : Promise.resolve(null),
       ]);
 
@@ -96,7 +96,7 @@ router.delete('/:uploadId', async (req, res) => {
     if (!record || record.status === 'deleted') {
       return res.status(404).json({ success: false, message: 'Upload not found' });
     }
-    await deleteFromCloudinary(record.cloudinary_public_id, record.resource_type);
+    await deleteFromStorage(record.cloudinary_public_id, record.resource_type);
     await markUploadDeleted(req.params.uploadId);
     res.json({ success: true, message: 'File deleted' });
   } catch (err) {

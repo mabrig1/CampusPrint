@@ -5,7 +5,7 @@ import {
   listUploadRecords, findUploadRecord, markUploadDeleted,
   listReferrals, createReferral, payoutReferral,
 } from '../lib/queries.js';
-import { deleteFromCloudinary } from '../lib/cloudinary.js';
+import { deleteFromStorage } from '../lib/storage.js';
 import { adminAuth } from '../middleware/adminAuth.js';
 import { notifyOrderReady } from '../services/notificationService.js';
 
@@ -156,7 +156,7 @@ router.delete('/files/:id', async (req, res, next) => {
     if (!record || record.status === 'deleted') {
       return res.status(404).json({ success: false, message: 'File not found' });
     }
-    await deleteFromCloudinary(record.cloudinary_public_id, record.resource_type);
+    await deleteFromStorage(record.cloudinary_public_id, record.resource_type);
     await markUploadDeleted(req.params.id);
     res.json({ success: true, message: 'File deleted' });
   } catch (err) { next(err); }
